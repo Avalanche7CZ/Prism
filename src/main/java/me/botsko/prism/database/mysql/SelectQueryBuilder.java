@@ -87,36 +87,40 @@ public class SelectQueryBuilder extends QueryBuilder {
       if (this.parameters.getWorld() != null) {
          this.addCondition(String.format("world_id = ( SELECT w.world_id FROM " + this.prefix + "worlds w WHERE w.world = '%s')", this.parameters.getWorld()));
       }
-
    }
 
    protected void actionCondition() {
       HashMap action_types = this.parameters.getActionTypeNames();
       boolean containsPrismProcessType = false;
       ArrayList prismActionIds = new ArrayList();
-      Iterator i$ = Prism.prismActions.entrySet().iterator();
+      Iterator prismActionsIter = Prism.prismActions.entrySet().iterator();
 
-      while(i$.hasNext()) {
-         Map.Entry entry = (Map.Entry)i$.next();
+      while(prismActionsIter.hasNext()) {
+         Map.Entry entry = (Map.Entry)prismActionsIter.next();
          if (((String)entry.getKey()).contains("prism")) {
             containsPrismProcessType = true;
-            prismActionIds.add("" + Prism.prismActions.get(entry.getKey()));
+            Object actionIdObj = Prism.prismActions.get(entry.getKey());
+            if (actionIdObj != null) {
+               prismActionIds.add(actionIdObj.toString());
+            }
          }
       }
 
       if (action_types.size() > 0) {
          ArrayList includeIds = new ArrayList();
          ArrayList excludeIds = new ArrayList();
-         Iterator i$ = action_types.entrySet().iterator();
+         Iterator actionTypesIter = action_types.entrySet().iterator();
 
-         while(i$.hasNext()) {
-            Map.Entry entry = (Map.Entry)i$.next();
-            if (((MatchRule)entry.getValue()).equals(MatchRule.INCLUDE)) {
-               includeIds.add("" + Prism.prismActions.get(entry.getKey()));
-            }
-
-            if (((MatchRule)entry.getValue()).equals(MatchRule.EXCLUDE)) {
-               excludeIds.add("" + Prism.prismActions.get(entry.getKey()));
+         while(actionTypesIter.hasNext()) {
+            Map.Entry entry = (Map.Entry)actionTypesIter.next();
+            Object actionIdObj = Prism.prismActions.get(entry.getKey());
+            if (actionIdObj != null) {
+               if (((MatchRule)entry.getValue()).equals(MatchRule.INCLUDE)) {
+                  includeIds.add(actionIdObj.toString());
+               }
+               if (((MatchRule)entry.getValue()).equals(MatchRule.EXCLUDE)) {
+                  excludeIds.add(actionIdObj.toString());
+               }
             }
          }
 
@@ -130,30 +134,28 @@ public class SelectQueryBuilder extends QueryBuilder {
       } else if (!containsPrismProcessType && !this.parameters.getProcessType().equals(PrismProcessType.DELETE)) {
          this.addCondition("action_id NOT IN (" + TypeUtils.join((List)prismActionIds, ",") + ")");
       }
-
    }
 
    protected void playerCondition() {
       HashMap playerNames = this.parameters.getPlayerNames();
       if (playerNames.size() > 0) {
          MatchRule playerMatch = MatchRule.INCLUDE;
-         Iterator i$ = playerNames.values().iterator();
-         if (i$.hasNext()) {
-            MatchRule match = (MatchRule)i$.next();
+         Iterator playerValuesIter = playerNames.values().iterator();
+         if (playerValuesIter.hasNext()) {
+            MatchRule match = (MatchRule)playerValuesIter.next();
             playerMatch = match;
          }
 
          String matchQuery = playerMatch.equals(MatchRule.INCLUDE) ? "IN" : "NOT IN";
-         Iterator i$ = playerNames.entrySet().iterator();
 
-         while(i$.hasNext()) {
-            Map.Entry entry = (Map.Entry)i$.next();
+         Iterator playerEntriesIter = playerNames.entrySet().iterator();
+         while(playerEntriesIter.hasNext()) {
+            Map.Entry entry = (Map.Entry)playerEntriesIter.next();
             entry.setValue(MatchRule.INCLUDE);
          }
 
-         this.addCondition(this.tableNameData + ".player_id " + matchQuery + " ( SELECT p.player_id FROM " + this.prefix + "players p WHERE " + this.buildMultipleConditions(playerNames, "p.player", (String)null) + ")");
+         this.addCondition(this.tableNameData + ".player_id " + matchQuery + " ( SELECT p.player_id FROM " + this.prefix + "players p WHERE " + this.buildMultipleConditions(playerNames, "p.player", null) + ")");
       }
-
    }
 
    protected void radiusCondition() {
@@ -166,18 +168,16 @@ public class SelectQueryBuilder extends QueryBuilder {
          String[] blockArr = new String[blockfilters.size()];
          int i = 0;
 
-         for(Iterator i$ = blockfilters.entrySet().iterator(); i$.hasNext(); ++i) {
-            Map.Entry entry = (Map.Entry)i$.next();
+         for(Iterator blockFiltersIter = blockfilters.entrySet().iterator(); blockFiltersIter.hasNext(); ++i) {
+            Map.Entry entry = (Map.Entry)blockFiltersIter.next();
             if ((Short)entry.getValue() == 0) {
                blockArr[i] = this.tableNameData + ".block_id = " + entry.getKey();
             } else {
                blockArr[i] = this.tableNameData + ".block_id = " + entry.getKey() + " AND " + this.tableNameData + ".block_subid = " + entry.getValue();
             }
          }
-
-         this.addCondition(this.buildGroupConditions((String)null, blockArr, "%s%s", "OR", (String)null));
+         this.addCondition(this.buildGroupConditions(null, blockArr, "%s%s", "OR", null));
       }
-
    }
 
    protected void entityCondition() {
@@ -185,7 +185,6 @@ public class SelectQueryBuilder extends QueryBuilder {
       if (entityNames.size() > 0) {
          this.addCondition(this.buildMultipleConditions(entityNames, "ex.data", "entity_name\":\"%s"));
       }
-
    }
 
    protected void timeCondition() {
@@ -196,17 +195,15 @@ public class SelectQueryBuilder extends QueryBuilder {
 
       time = this.parameters.getSinceTime();
       if (time != null && time != 0L) {
-         this.addCondition(this.buildTimeCondition(time, (String)null));
+         this.addCondition(this.buildTimeCondition(time, null));
       }
-
    }
 
    protected void keywordCondition() {
       String keyword = this.parameters.getKeyword();
       if (keyword != null) {
-         this.addCondition("ex.data LIKE '%" + keyword + "%'");
+         this.addCondition("ex.data LIKE '%" + keyword.replace("'", "''") + "%'");
       }
-
    }
 
    protected void coordinateCondition() {
@@ -215,33 +212,29 @@ public class SelectQueryBuilder extends QueryBuilder {
          String coordCond = "(";
          int l = 0;
 
-         for(Iterator i$ = locations.iterator(); i$.hasNext(); ++l) {
-            Location loc = (Location)i$.next();
+         for(Iterator locationsIter = locations.iterator(); locationsIter.hasNext(); ++l) {
+            Location loc = (Location)locationsIter.next();
             coordCond = coordCond + (l > 0 ? " OR" : "") + " (" + this.tableNameData + ".x = " + loc.getBlockX() + " AND " + this.tableNameData + ".y = " + loc.getBlockY() + " AND " + this.tableNameData + ".z = " + loc.getBlockZ() + ")";
          }
-
          coordCond = coordCond + ")";
          this.addCondition(coordCond);
       }
-
    }
 
    protected String buildWhereConditions() {
       int condCount = 1;
       String query = "";
       if (this.conditions.size() > 0) {
-         for(Iterator i$ = this.conditions.iterator(); i$.hasNext(); ++condCount) {
-            String cond = (String)i$.next();
+         for(Iterator conditionsIter = this.conditions.iterator(); conditionsIter.hasNext(); ++condCount) {
+            String cond = (String)conditionsIter.next();
             if (condCount == 1) {
                query = query + " WHERE ";
             } else {
                query = query + " AND ";
             }
-
             query = query + cond;
          }
       }
-
       return query;
    }
 
@@ -261,7 +254,6 @@ public class SelectQueryBuilder extends QueryBuilder {
             return " LIMIT " + limit;
          }
       }
-
       return "";
    }
 
@@ -271,10 +263,10 @@ public class SelectQueryBuilder extends QueryBuilder {
          ArrayList whereIs = new ArrayList();
          ArrayList whereNot = new ArrayList();
          ArrayList whereIsLike = new ArrayList();
-         Iterator i$ = origValues.entrySet().iterator();
+         Iterator origValuesIter = origValues.entrySet().iterator();
 
-         while(i$.hasNext()) {
-            Map.Entry entry = (Map.Entry)i$.next();
+         while(origValuesIter.hasNext()) {
+            Map.Entry entry = (Map.Entry)origValuesIter.next();
             if (((MatchRule)entry.getValue()).equals(MatchRule.EXCLUDE)) {
                whereNot.add(entry.getKey());
             } else if (((MatchRule)entry.getValue()).equals(MatchRule.PARTIAL)) {
@@ -284,34 +276,32 @@ public class SelectQueryBuilder extends QueryBuilder {
             }
          }
 
-         String[] whereNotValues;
+         String[] whereValuesArray;
          if (!whereIs.isEmpty()) {
-            whereNotValues = new String[whereIs.size()];
-            whereNotValues = (String[])whereIs.toArray(whereNotValues);
+            whereValuesArray = (String[])whereIs.toArray(new String[0]);
             if (format == null) {
-               query = query + this.buildGroupConditions(field_name, whereNotValues, "%s = '%s'", "OR", (String)null);
+               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s = '%s'", "OR", null);
             } else {
-               query = query + this.buildGroupConditions(field_name, whereNotValues, "%s LIKE '%%%s%%'", "OR", format);
+               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s LIKE '%%%s%%'", "OR", format);
             }
          }
 
          if (!whereIsLike.isEmpty()) {
-            whereNotValues = new String[whereIsLike.size()];
-            whereNotValues = (String[])whereIsLike.toArray(whereNotValues);
-            query = query + this.buildGroupConditions(field_name, whereNotValues, "%s LIKE '%%%s%%'", "OR", format);
+            if(!query.isEmpty() && query.charAt(query.length()-1) != '(' && !query.trim().endsWith("OR")) query += " OR ";
+            whereValuesArray = (String[])whereIsLike.toArray(new String[0]);
+            query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s LIKE '%%%s%%'", "OR", format);
          }
 
          if (!whereNot.isEmpty()) {
-            whereNotValues = new String[whereNot.size()];
-            whereNotValues = (String[])whereNot.toArray(whereNotValues);
+            if(!query.isEmpty() && query.charAt(query.length()-1) != '(' && !query.trim().endsWith("AND")) query += " AND ";
+            whereValuesArray = (String[])whereNot.toArray(new String[0]);
             if (format == null) {
-               query = query + this.buildGroupConditions(field_name, whereNotValues, "%s != '%s'", (String)null, (String)null);
+               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s != '%s'", "AND", null);
             } else {
-               query = query + this.buildGroupConditions(field_name, whereNotValues, "%s NOT LIKE '%%%s%%'", (String)null, format);
+               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s NOT LIKE '%%%s%%'", "AND", format);
             }
          }
       }
-
       return query;
    }
 
@@ -323,23 +313,17 @@ public class SelectQueryBuilder extends QueryBuilder {
       if (arg_values.length > 0 && !matchFormat.isEmpty()) {
          where = where + "(";
          int c = 1;
-         String[] arr$ = arg_values;
-         int len$ = arg_values.length;
-
-         for(int i$ = 0; i$ < len$; ++i$) {
-            String val = arr$[i$];
-            if (c > 1 && c <= arg_values.length) {
+         for(String val : arg_values) {
+            if (c > 1) {
                where = where + " " + matchType + " ";
             }
-
-            fieldname = fieldname == null ? "" : fieldname;
-            where = where + String.format(matchFormat, fieldname, String.format(dataFormat, val));
+            String currentFieldname = fieldname == null ? "" : fieldname;
+            String sanitizedVal = (val != null) ? val.replace("'", "''") : "";
+            where = where + String.format(matchFormat, currentFieldname, String.format(dataFormat, sanitizedVal));
             ++c;
          }
-
          where = where + ")";
       }
-
       return where;
    }
 
@@ -349,19 +333,16 @@ public class SelectQueryBuilder extends QueryBuilder {
          this.addCondition("(" + this.tableNameData + ".y BETWEEN " + minLoc.getBlockY() + " AND " + maxLoc.getBlockY() + ")");
          this.addCondition("(" + this.tableNameData + ".z BETWEEN " + minLoc.getBlockZ() + " AND " + maxLoc.getBlockZ() + ")");
       }
-
    }
 
    protected String buildTimeCondition(Long dateFrom, String equation) {
-      String where = "";
       if (dateFrom != null) {
          if (equation == null) {
-            this.addCondition(this.tableNameData + ".epoch >= " + dateFrom / 1000L + "");
+            this.addCondition(this.tableNameData + ".epoch >= " + dateFrom / 1000L);
          } else {
-            this.addCondition(this.tableNameData + ".epoch " + equation + " '" + dateFrom / 1000L + "'");
+            this.addCondition(this.tableNameData + ".epoch " + equation + " " + dateFrom / 1000L);
          }
       }
-
       return "";
    }
 }
