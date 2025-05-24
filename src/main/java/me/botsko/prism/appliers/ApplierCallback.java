@@ -1,0 +1,7 @@
+package me.botsko.prism.appliers;
+
+import org.bukkit.command.CommandSender;
+
+public interface ApplierCallback {
+   void handle(CommandSender var1, ApplierResult var2);
+}
