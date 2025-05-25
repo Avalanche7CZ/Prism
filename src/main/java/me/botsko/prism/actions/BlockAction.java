@@ -1,6 +1,6 @@
 package me.botsko.prism.actions;
 
-import com.helion3.elixr.TypeUtils;
+import me.botsko.elixr.TypeUtils;
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.QueryParameters;
 import me.botsko.prism.appliers.ChangeResult;

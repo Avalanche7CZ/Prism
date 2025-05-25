@@ -6,13 +6,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 import me.botsko.elixr.TypeUtils;
 import me.botsko.prism.Prism;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-
+@SuppressWarnings("deprecation")
 public class PlayerIdentification {
 
 
@@ -24,6 +26,7 @@ public class PlayerIdentification {
      *
      * @param player
      */
+
     public static PrismPlayer cachePrismPlayer( final Player player ){
 
         // Lookup the player
@@ -48,16 +51,16 @@ public class PlayerIdentification {
      * Runs during PlayerJoin events, so it will never be for a fake/null
      * player.
      *
-     * @param player
+     * @param playerName
      */
     public static PrismPlayer cachePrismPlayer( final String playerName ){
 
         // Lookup the player
         PrismPlayer prismPlayer = getPrismPlayer( playerName );
         if( prismPlayer != null ){
-//            prismPlayer = comparePlayerToCache( player, prismPlayer );
+//            prismPlayer = comparePlayerToCache( player, prismPlayer ); // This line was commented out and needs a Player object
             Prism.debug("Loaded player " + prismPlayer.getName() + ", id: " + prismPlayer.getId() + " into the cache.");
-//            Prism.prismPlayers.put( player.getUniqueId(), prismPlayer );
+//            Prism.prismPlayers.put( player.getUniqueId(), prismPlayer ); // This line was commented out and needs a Player object
             return prismPlayer;
         }
 
@@ -102,7 +105,7 @@ public class PlayerIdentification {
      *
      * Used by the recorder in determining proper foreign key
      *
-     * @param playerName
+     * @param player
      * @return
      */
     public static PrismPlayer getPrismPlayer( Player player ){
@@ -173,7 +176,7 @@ public class PlayerIdentification {
 
     /**
      * Converts UUID to a string ready for use against database
-     * @param player
+     * @param id
      */
     protected static String uuidToDbString( UUID id ){
         return id.toString().replace("-", "");
@@ -182,7 +185,7 @@ public class PlayerIdentification {
 
     /**
      * Converts UUID to a string ready for use against database
-     * @param player
+     * @param uuid
      */
     protected static UUID uuidFromDbString( String uuid ){
         // Positions need to be -2
@@ -375,12 +378,15 @@ public class PlayerIdentification {
     public static void cacheOnlinePlayerPrimaryKeys(){
         String prefix = Prism.config.getString("prism.mysql.prefix");
 
-        String[] playerNames;
-        playerNames = new String[ Bukkit.getServer().getOnlinePlayers().size() ];
-        int i = 0;
-        for( Player pl : Bukkit.getServer().getOnlinePlayers() ){
-            playerNames[i] = pl.getName();
-            i++;
+        // For Bukkit 1.7.10, getOnlinePlayers() returns Player[]
+        Player[] onlinePlayersArray = Bukkit.getServer().getOnlinePlayers().toArray(new Player[0]);
+        List<String> playerNames = new ArrayList<>();
+        for( Player pl : onlinePlayersArray ){
+            playerNames.add(pl.getName());
+        }
+
+        if (playerNames.isEmpty()) {
+            return; // No online players to cache
         }
 
         Connection conn = null;
@@ -389,14 +395,32 @@ public class PlayerIdentification {
         try {
 
             conn = Prism.dbc();
-            s = conn.prepareStatement( "SELECT player_id, player, HEX(player_uuid) FROM " + prefix + "players WHERE player IN (?)" );
-            s.setString(1, "'"+TypeUtils.join(playerNames, "','")+"'");
+
+            // Dynamically build the IN clause with '?' placeholders
+            StringBuilder sqlBuilder = new StringBuilder("SELECT player_id, player, HEX(player_uuid) FROM ")
+                    .append(prefix).append("players WHERE player IN (");
+            for (int i = 0; i < playerNames.size(); i++) {
+                sqlBuilder.append("?");
+                if (i < playerNames.size() - 1) {
+                    sqlBuilder.append(",");
+                }
+            }
+            sqlBuilder.append(")");
+
+            s = conn.prepareStatement(sqlBuilder.toString());
+
+            // Set each player name as a parameter
+            for (int i = 0; i < playerNames.size(); i++) {
+                s.setString(i + 1, playerNames.get(i));
+            }
+
             rs = s.executeQuery();
 
             while( rs.next() ){
                 PrismPlayer prismPlayer = new PrismPlayer( rs.getInt(1), uuidFromDbString(rs.getString(3)), rs.getString(2) );
                 Prism.debug("Loaded player " + rs.getString(2) + ", id: " + rs.getInt(1) + " into the cache.");
-                Prism.prismPlayers.put( UUID.fromString(rs.getString(2)), prismPlayer );
+                // Corrected: Use prismPlayer.getUUID() as the key for the map
+                Prism.prismPlayers.put( prismPlayer.getUUID(), prismPlayer );
             }
         } catch (SQLException e) {
             e.printStackTrace();

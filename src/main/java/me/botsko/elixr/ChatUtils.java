@@ -1,21 +1,18 @@
 package me.botsko.elixr;
 
-import java.util.Collection; // Import Collection
-import java.util.Iterator;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+@SuppressWarnings("deprecation")
 public class ChatUtils {
    public static void notifyNearby(Location loc, int radius, String msg) {
-      Iterator<Player> var3 = ((Collection<Player>) Bukkit.getServer().getOnlinePlayers()).iterator();
 
-      while(var3.hasNext()) {
-         Player p = (Player)var3.next();
+      Player[] onlinePlayers = Bukkit.getServer().getOnlinePlayers().toArray(new Player[0]);
+      for (Player p : onlinePlayers) {
          if (loc.getWorld().equals(p.getWorld()) && loc.distance(p.getLocation()) <= (double)radius) {
             p.sendMessage(msg);
          }
       }
-
    }
 }

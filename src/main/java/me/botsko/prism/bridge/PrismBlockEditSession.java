@@ -11,44 +11,25 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalPlayer;
 import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
-import com.sk89q.worldedit.bags.BlockBag;
+import com.sk89q.worldedit.extent.inventory.BlockBag; // Corrected import
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 
 public class PrismBlockEditSession extends EditSession {
 
-    /**
-	 * 
-	 */
     private final LocalPlayer player;
 
-    /**
-     * 
-     * @param world
-     * @param maxBlocks
-     * @param player
-     */
     public PrismBlockEditSession(LocalWorld world, int maxBlocks, LocalPlayer player) {
         super( world, maxBlocks );
         this.player = player;
     }
 
-    /**
-     * 
-     * @param world
-     * @param maxBlocks
-     * @param blockBag
-     * @param player
-     */
     public PrismBlockEditSession(LocalWorld world, int maxBlocks, BlockBag blockBag, LocalPlayer player) {
         super( world, maxBlocks, blockBag );
         this.player = player;
     }
 
-    /**
-	 * 
-	 */
-    @Override
+    @Override // Added @Override
     public boolean rawSetBlock(Vector pt, BaseBlock block) {
         if( !( player.getWorld() instanceof BukkitWorld ) || !Prism.config.getBoolean( "prism.tracking.world-edit" ) ) { return super
                 .rawSetBlock( pt, block ); }

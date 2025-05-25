@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 
+@SuppressWarnings("deprecation")
 public class PlayerUtils {
    public static void resetPlayer(Player p) {
       p.closeInventory();
@@ -16,12 +17,10 @@ public class PlayerUtils {
       if (!p.isDead()) {
          p.setHealth(p.getMaxHealth());
          p.setFoodLevel(20);
-         Iterator var1 = p.getActivePotionEffects().iterator();
 
-         while(var1.hasNext()) {
-            PotionEffect effect = (PotionEffect)var1.next();
-            p.removePotionEffect(effect.getType());
-         }
+          for (PotionEffect effect : p.getActivePotionEffects()) {
+              p.removePotionEffect(effect.getType());
+          }
 
          p.setFireTicks(0);
       }

@@ -1,7 +1,9 @@
 package com.helion3.pste.api;
 
-import com.helion3.prism.libs.com.google.gson.Gson;
-import com.helion3.prism.libs.com.google.gson.GsonBuilder;
+
+import com.sk89q.worldedit.internal.gson.Gson;
+import com.sk89q.worldedit.internal.gson.GsonBuilder;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
