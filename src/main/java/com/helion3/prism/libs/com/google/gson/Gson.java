@@ -58,15 +58,18 @@ public final class Gson {
       this.calls = new ThreadLocal();
       this.typeTokenCache = Collections.synchronizedMap(new HashMap());
       this.deserializationContext = new JsonDeserializationContext() {
+         @Override
          public Object deserialize(JsonElement json, Type typeOfT) throws JsonParseException {
             return Gson.this.fromJson(json, typeOfT);
          }
       };
       this.serializationContext = new JsonSerializationContext() {
+         @Override
          public JsonElement serialize(Object src) {
             return Gson.this.toJsonTree(src);
          }
 
+         @Override
          public JsonElement serialize(Object src, Type typeOfSrc) {
             return Gson.this.toJsonTree(src, typeOfSrc);
          }
@@ -117,7 +120,8 @@ public final class Gson {
 
    private TypeAdapter doubleAdapter(boolean serializeSpecialFloatingPointValues) {
       return serializeSpecialFloatingPointValues ? TypeAdapters.DOUBLE : new TypeAdapter() {
-         public Double read(JsonReader in) throws IOException {
+         @Override
+         public Object read(JsonReader in) throws IOException {
             if (in.peek() == JsonToken.NULL) {
                in.nextNull();
                return null;
@@ -126,13 +130,14 @@ public final class Gson {
             }
          }
 
-         public void write(JsonWriter out, Number value) throws IOException {
+         @Override
+         public void write(JsonWriter out, Object value) throws IOException {
             if (value == null) {
                out.nullValue();
             } else {
-               double doubleValue = value.doubleValue();
+               double doubleValue = ((Number) value).doubleValue();
                Gson.this.checkValidFloatingPoint(doubleValue);
-               out.value(value);
+               out.value((Number) value);
             }
          }
       };
@@ -140,7 +145,8 @@ public final class Gson {
 
    private TypeAdapter floatAdapter(boolean serializeSpecialFloatingPointValues) {
       return serializeSpecialFloatingPointValues ? TypeAdapters.FLOAT : new TypeAdapter() {
-         public Float read(JsonReader in) throws IOException {
+         @Override
+         public Object read(JsonReader in) throws IOException {
             if (in.peek() == JsonToken.NULL) {
                in.nextNull();
                return null;
@@ -149,13 +155,14 @@ public final class Gson {
             }
          }
 
-         public void write(JsonWriter out, Number value) throws IOException {
+         @Override
+         public void write(JsonWriter out, Object value) throws IOException {
             if (value == null) {
                out.nullValue();
             } else {
-               float floatValue = value.floatValue();
+               float floatValue = ((Number) value).floatValue();
                Gson.this.checkValidFloatingPoint((double)floatValue);
-               out.value(value);
+               out.value((Number) value);
             }
          }
       };
@@ -169,7 +176,8 @@ public final class Gson {
 
    private TypeAdapter longAdapter(LongSerializationPolicy longSerializationPolicy) {
       return longSerializationPolicy == LongSerializationPolicy.DEFAULT ? TypeAdapters.LONG : new TypeAdapter() {
-         public Number read(JsonReader in) throws IOException {
+         @Override
+         public Object read(JsonReader in) throws IOException {
             if (in.peek() == JsonToken.NULL) {
                in.nextNull();
                return null;
@@ -178,7 +186,8 @@ public final class Gson {
             }
          }
 
-         public void write(JsonWriter out, Number value) throws IOException {
+         @Override
+         public void write(JsonWriter out, Object value) throws IOException {
             if (value == null) {
                out.nullValue();
             } else {
@@ -464,6 +473,7 @@ public final class Gson {
          }
       }
 
+      @Override
       public Object read(JsonReader in) throws IOException {
          if (this.delegate == null) {
             throw new IllegalStateException();
@@ -472,6 +482,7 @@ public final class Gson {
          }
       }
 
+      @Override
       public void write(JsonWriter out, Object value) throws IOException {
          if (this.delegate == null) {
             throw new IllegalStateException();

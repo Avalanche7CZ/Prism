@@ -9,6 +9,7 @@ public abstract class UnsafeAllocator {
    public abstract Object newInstance(Class var1) throws Exception;
 
    public static UnsafeAllocator create() {
+      Method getConstructorId = null; // Declare once here
       try {
          Class unsafeClass = Class.forName("sun.misc.Unsafe");
          Field f = unsafeClass.getDeclaredField("theUnsafe");
@@ -16,18 +17,20 @@ public abstract class UnsafeAllocator {
          final Object unsafe = f.get((Object)null);
          final Method allocateInstance = unsafeClass.getMethod("allocateInstance", Class.class);
          return new UnsafeAllocator() {
+            @Override
             public Object newInstance(Class c) throws Exception {
                return allocateInstance.invoke(unsafe, c);
             }
          };
       } catch (Exception var6) {
-         final Method getConstructorId;
          try {
             getConstructorId = ObjectInputStream.class.getDeclaredMethod("newInstance", Class.class, Class.class);
             getConstructorId.setAccessible(true);
+            Method finalGetConstructorId = getConstructorId;
             return new UnsafeAllocator() {
+               @Override
                public Object newInstance(Class c) throws Exception {
-                  return getConstructorId.invoke((Object)null, c, Object.class);
+                  return finalGetConstructorId.invoke((Object)null, c, Object.class);
                }
             };
          } catch (Exception var5) {
@@ -38,12 +41,14 @@ public abstract class UnsafeAllocator {
                final Method newInstance = ObjectStreamClass.class.getDeclaredMethod("newInstance", Class.class, Integer.TYPE);
                newInstance.setAccessible(true);
                return new UnsafeAllocator() {
+                  @Override
                   public Object newInstance(Class c) throws Exception {
                      return newInstance.invoke((Object)null, c, constructorId);
                   }
                };
             } catch (Exception var4) {
                return new UnsafeAllocator() {
+                  @Override
                   public Object newInstance(Class c) {
                      throw new UnsupportedOperationException("Cannot allocate " + c);
                   }

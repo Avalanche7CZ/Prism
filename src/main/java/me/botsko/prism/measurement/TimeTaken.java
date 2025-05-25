@@ -1,62 +1,87 @@
 package me.botsko.prism.measurement;
 
 import java.util.Calendar;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.TreeMap;
+import java.util.Map.Entry;
+
 import me.botsko.prism.Prism;
 
 public class TimeTaken {
-   protected final Prism plugin;
-   protected final TreeMap eventsTimed = new TreeMap();
 
-   public TimeTaken(Prism plugin) {
-      this.plugin = plugin;
-   }
+    protected final Prism plugin;
 
-   protected long getTimestamp() {
-      Calendar lCDateTime = Calendar.getInstance();
-      return lCDateTime.getTimeInMillis();
-   }
+    /**
+     * 
+     * @param plugin
+     */
+    public TimeTaken(Prism plugin) {
+        this.plugin = plugin;
+    }
 
-   public void recordTimedEvent(String eventname) {
-      if (this.plugin.getConfig().getBoolean("prism.debug")) {
-         this.eventsTimed.put(this.getTimestamp(), eventname);
-      }
-   }
+    /**
+	 * 
+	 */
+    protected final TreeMap<Long, String> eventsTimed = new TreeMap<Long, String>();
 
-   protected void resetEventList() {
-      this.eventsTimed.clear();
-   }
+    /**
+     * 
+     * @return
+     */
+    protected long getTimestamp() {
+        final Calendar lCDateTime = Calendar.getInstance();
+        return lCDateTime.getTimeInMillis();
+    }
 
-   protected TreeMap getEventsTimedList() {
-      return this.eventsTimed;
-   }
+    /**
+     * 
+     * @param eventname
+     */
+    public void recordTimedEvent(String eventname) {
+        if( !plugin.getConfig().getBoolean( "prism.debug" ) )
+            return;
+        eventsTimed.put( getTimestamp(), eventname );
+    }
 
-   public void printTimeRecord() {
-      if (this.plugin.getConfig().getBoolean("prism.debug")) {
-         TreeMap timers = this.plugin.eventTimer.getEventsTimedList();
-         if (timers.size() > 0) {
-            long lastTime = 0L;
-            long total = 0L;
-            Prism.debug("-- Timer information for last action: --");
+    /**
+	 * 
+	 */
+    protected void resetEventList() {
+        eventsTimed.clear();
+    }
 
-            Map.Entry entry;
-            for(Iterator i$ = timers.entrySet().iterator(); i$.hasNext(); lastTime = (Long)entry.getKey()) {
-               entry = (Map.Entry)i$.next();
-               long diff = 0L;
-               if (lastTime > 0L) {
-                  diff = (Long)entry.getKey() - lastTime;
-                  total += diff;
-               }
+    /**
+     * 
+     * @return
+     */
+    protected TreeMap<Long, String> getEventsTimedList() {
+        return eventsTimed;
+    }
 
-               Prism.debug((String)entry.getValue() + " " + diff + "ms");
+    /**
+     * 
+     * @param plugin
+     */
+    public void printTimeRecord() {
+
+        // record timed events to log
+        if( plugin.getConfig().getBoolean( "prism.debug" ) ) {
+            final TreeMap<Long, String> timers = plugin.eventTimer.getEventsTimedList();
+            if( timers.size() > 0 ) {
+                long lastTime = 0;
+                long total = 0;
+                Prism.debug( "-- Timer information for last action: --" );
+                for ( final Entry<Long, String> entry : timers.entrySet() ) {
+                    long diff = 0;
+                    if( lastTime > 0 ) {
+                        diff = entry.getKey() - lastTime;
+                        total += diff;
+                    }
+                    Prism.debug( entry.getValue() + " " + diff + "ms" );
+                    lastTime = entry.getKey();
+                }
+                Prism.debug( "Total time: " + total + "ms" );
             }
-
-            Prism.debug("Total time: " + total + "ms");
-         }
-      }
-
-      this.plugin.eventTimer.resetEventList();
-   }
+        }
+        plugin.eventTimer.resetEventList();
+    }
 }

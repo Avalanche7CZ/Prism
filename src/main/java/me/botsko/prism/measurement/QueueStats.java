@@ -1,32 +1,45 @@
 package me.botsko.prism.measurement;
 
 import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public class QueueStats {
-   protected final ConcurrentSkipListMap perRunRecordingCounts = new ConcurrentSkipListMap();
 
-   public void addRunCount(int count) {
-      Date date = new Date();
-      long currentTime = date.getTime();
-      if (this.perRunRecordingCounts.size() > 5) {
-         int i = 0;
-         Iterator i$ = this.perRunRecordingCounts.descendingMap().entrySet().iterator();
+    /**
+	 * 
+	 */
+    protected final ConcurrentSkipListMap<Long, Integer> perRunRecordingCounts = new ConcurrentSkipListMap<Long, Integer>();
 
-         while(i$.hasNext()) {
-            Map.Entry entry = (Map.Entry)i$.next();
-            if (i++ > 5) {
-               this.perRunRecordingCounts.remove(entry.getKey());
+    /**
+     * 
+     * @param count
+     */
+    public void addRunCount(int count) {
+
+        final Date date = new Date();
+        final long currentTime = date.getTime();
+
+        // Delete any that are older than a few minutes, so we don't spam the
+        // screen
+        // unless we only have a few already
+        if( perRunRecordingCounts.size() > 5 ) {
+            int i = 0;
+            for ( final Entry<Long, Integer> entry : perRunRecordingCounts.descendingMap().entrySet() ) {
+                if( i++ > 5 ) {
+                    perRunRecordingCounts.remove( entry.getKey() );
+                }
             }
-         }
-      }
+        }
+        perRunRecordingCounts.put( currentTime, count );
 
-      this.perRunRecordingCounts.put(currentTime, count);
-   }
+    }
 
-   public ConcurrentSkipListMap getRecentRunCounts() {
-      return this.perRunRecordingCounts;
-   }
+    /**
+     * 
+     * @return
+     */
+    public ConcurrentSkipListMap<Long, Integer> getRecentRunCounts() {
+        return perRunRecordingCounts;
+    }
 }

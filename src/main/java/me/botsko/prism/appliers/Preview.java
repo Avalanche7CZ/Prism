@@ -1,12 +1,13 @@
 package me.botsko.prism.appliers;
 
-import com.helion3.prism.libs.elixr.EntityUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+
+import me.botsko.elixr.EntityUtils;
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.QueryParameters;
 import me.botsko.prism.actions.Handler;
@@ -14,6 +15,7 @@ import me.botsko.prism.events.BlockStateChange;
 import me.botsko.prism.events.PrismBlocksRollbackEvent;
 import me.botsko.prism.wands.RollbackWand;
 import me.botsko.prism.wands.Wand;
+
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
@@ -22,287 +24,477 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 public class Preview implements Previewable {
-   protected final Prism plugin;
-   protected final PrismProcessType processType;
-   protected final CommandSender sender;
-   protected final Player player;
-   protected final QueryParameters parameters;
-   protected boolean is_preview = false;
-   protected final HashMap entities_moved = new HashMap();
-   protected final ArrayList blockStateChanges = new ArrayList();
-   protected int skipped_block_count;
-   protected int changes_applied_count;
-   protected int changes_planned_count;
-   protected int blockChangesRead = 0;
-   protected final List worldChangeQueue = Collections.synchronizedList(new LinkedList());
-   protected int worldChangeQueueTaskId;
-   protected ApplierCallback callback;
 
-   public Preview(Prism plugin, CommandSender sender, List results, QueryParameters parameters, ApplierCallback callback) {
-      this.processType = parameters.getProcessType();
-      this.plugin = plugin;
-      this.sender = sender;
-      this.parameters = parameters;
-      if (sender instanceof Player) {
-         this.player = (Player)sender;
-      } else {
-         this.player = null;
-      }
+    /**
+	 * 
+	 */
+    protected final Prism plugin;
 
-      if (callback != null) {
-         this.callback = callback;
-      }
+    /**
+	 * 
+	 */
+    protected final PrismProcessType processType;
 
-      this.worldChangeQueue.addAll(results);
-   }
+    /**
+	 * 
+	 */
+    protected final CommandSender sender;
 
-   public void setIsPreview(boolean is_preview) {
-      this.is_preview = is_preview;
-   }
+    /**
+	 * 
+	 */
+    protected final Player player;
 
-   public void cancel_preview() {
-      if (this.player != null) {
-         if (!this.blockStateChanges.isEmpty()) {
-            ArrayList previewPlayers = this.parameters.getSharedPlayers();
-            previewPlayers.add(this.player);
-            Iterator i$ = this.blockStateChanges.iterator();
+    /**
+	 * 
+	 */
+    protected final QueryParameters parameters;
 
-            while(i$.hasNext()) {
-               BlockStateChange u = (BlockStateChange)i$.next();
-               Iterator i$ = previewPlayers.iterator();
+    /**
+	 * 
+	 */
+    protected boolean is_preview = false;
 
-               while(i$.hasNext()) {
-                  CommandSender sharedPlayer = (CommandSender)i$.next();
-                  if (sharedPlayer instanceof Player) {
-                     ((Player)sharedPlayer).sendBlockChange(u.getOriginalBlock().getLocation(), u.getOriginalBlock().getTypeId(), u.getOriginalBlock().getRawData());
-                  }
-               }
+    /**
+	 * 
+	 */
+    protected final HashMap<Entity, Integer> entities_moved = new HashMap<Entity, Integer>();
+
+    /**
+	 * 
+	 */
+    protected final ArrayList<BlockStateChange> blockStateChanges = new ArrayList<BlockStateChange>();
+
+    /**
+	 * 
+	 */
+    protected int skipped_block_count;
+
+    /**
+	 * 
+	 */
+    protected int changes_applied_count;
+
+    /**
+	 * 
+	 */
+    protected int changes_planned_count;
+
+    /**
+     * Keep a count of changes read from the queue. We don't actually remove the
+     * changes from the queue if this is a preview, so we need to know when
+     * we've reached the end.
+     */
+    protected int blockChangesRead = 0;
+
+    /**
+	 * 
+	 */
+    protected final List<Handler> worldChangeQueue = Collections.synchronizedList( new LinkedList<Handler>() );
+
+    /**
+	 * 
+	 */
+    protected int worldChangeQueueTaskId;
+
+    /**
+	 * 
+	 */
+    protected ApplierCallback callback;
+
+    /**
+     * 
+     * @param plugin
+     * @return
+     */
+    public Preview(Prism plugin, CommandSender sender, List<Handler> results, QueryParameters parameters,
+            ApplierCallback callback) {
+
+        this.processType = parameters.getProcessType();
+        this.plugin = plugin;
+        this.sender = sender;
+        this.parameters = parameters;
+
+        if( sender instanceof Player ) {
+            this.player = (Player) sender;
+        } else {
+            this.player = null;
+        }
+
+        if( callback != null ) {
+            this.callback = callback;
+        }
+
+        // Append all actions to the queue.
+        worldChangeQueue.addAll( results );
+
+    }
+
+    /**
+     * 
+     * @param is_preview
+     */
+    @Override
+    public void setIsPreview(boolean is_preview) {
+        this.is_preview = is_preview;
+    }
+
+    /**
+	 * 
+	 */
+    @Override
+    public void cancel_preview() {
+        if( player == null )
+            return;
+        if( !blockStateChanges.isEmpty() ) {
+
+            // pull all players that are part of this preview
+            final ArrayList<CommandSender> previewPlayers = parameters.getSharedPlayers();
+            previewPlayers.add( player );
+
+            for ( final BlockStateChange u : blockStateChanges ) {
+                for ( final CommandSender sharedPlayer : previewPlayers ) {
+                    if( sharedPlayer instanceof Player )
+                        ( (Player) sharedPlayer ).sendBlockChange( u.getOriginalBlock().getLocation(), u
+                                .getOriginalBlock().getTypeId(), u.getOriginalBlock().getRawData() );
+                }
             }
-         }
+        }
+        sender.sendMessage( Prism.messenger.playerHeaderMsg( "Preview canceled." + ChatColor.GRAY
+                + " Please come again!" ) );
+    }
 
-         this.sender.sendMessage(Prism.messenger.playerHeaderMsg("Preview canceled." + ChatColor.GRAY + " Please come again!"));
-      }
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public void apply_preview() {
+        if( player == null )
+            return;
+        sender.sendMessage( Prism.messenger.playerHeaderMsg( "Applying rollback from preview..." ) );
+        setIsPreview( false );
+        changes_applied_count = 0;
+        skipped_block_count = 0;
+        changes_planned_count = 0;
+        apply();
+    }
 
-   public void apply_preview() {
-      if (this.player != null) {
-         this.sender.sendMessage(Prism.messenger.playerHeaderMsg("Applying rollback from preview..."));
-         this.setIsPreview(false);
-         this.changes_applied_count = 0;
-         this.skipped_block_count = 0;
-         this.changes_planned_count = 0;
-         this.apply();
-      }
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public void preview() {}
 
-   public void preview() {
-   }
+    /**
+     * 
+     * @return
+     */
+    @Override
+    public void apply() {
 
-   public void apply() {
-      if (!this.worldChangeQueue.isEmpty()) {
-         if (!this.is_preview && this.player != null) {
-            Wand oldwand = null;
-            if (Prism.playersWithActiveTools.containsKey(this.player.getName())) {
-               oldwand = (Wand)Prism.playersWithActiveTools.get(this.player.getName());
+        if( !worldChangeQueue.isEmpty() ) {
+
+            if( !is_preview && player != null ) {
+
+                Wand oldwand = null;
+                if( Prism.playersWithActiveTools.containsKey( player.getName() ) ) {
+                    // Pull the wand in use
+                    oldwand = Prism.playersWithActiveTools.get( player.getName() );
+                }
+
+                boolean show_nearby = true;
+                if( oldwand != null && oldwand instanceof RollbackWand ) {
+                    show_nearby = false;
+                }
+                if( show_nearby ) {
+                    // Inform nearby players
+                    plugin.notifyNearby( player, parameters.getRadius(), player.getDisplayName() + " is performing a "
+                            + processType.name().toLowerCase() + " near you." );
+                    // Inform staff
+                    if( plugin.getConfig().getBoolean( "prism.alerts.alert-staff-to-applied-process" ) ) {
+                        final String cmd = parameters.getOriginalCommand();
+                        if( cmd != null ) {
+                            plugin.alertPlayers( player, ChatColor.WHITE + processType.name().toLowerCase() + " by "
+                                    + player.getDisplayName() + ChatColor.GRAY + parameters.getOriginalCommand() );
+                        }
+                    }
+                }
             }
 
-            boolean show_nearby = true;
-            if (oldwand != null && oldwand instanceof RollbackWand) {
-               show_nearby = false;
-            }
+            // Offload the work of world changes
+            // to a scheduled sync task
+            processWorldChanges();
+        }
+    }
 
-            if (show_nearby) {
-               this.plugin.notifyNearby(this.player, this.parameters.getRadius(), this.player.getDisplayName() + " is performing a " + this.processType.name().toLowerCase() + " near you.");
-               if (this.plugin.getConfig().getBoolean("prism.alerts.alert-staff-to-applied-process")) {
-                  String cmd = this.parameters.getOriginalCommand();
-                  if (cmd != null) {
-                     this.plugin.alertPlayers(this.player, ChatColor.WHITE + this.processType.name().toLowerCase() + " by " + this.player.getDisplayName() + ChatColor.GRAY + this.parameters.getOriginalCommand());
-                  }
-               }
-            }
-         }
+    /**
+	 * 
+	 */
+    public void processWorldChanges() {
 
-         this.processWorldChanges();
-      }
+        blockChangesRead = 0;
 
-   }
+        worldChangeQueueTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask( plugin, new Runnable() {
 
-   public void processWorldChanges() {
-      this.blockChangesRead = 0;
-      this.worldChangeQueueTaskId = this.plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, new Runnable() {
-         public void run() {
-            if (Preview.this.plugin.getConfig().getBoolean("prism.debug")) {
-               Prism.debug("World change queue size: " + Preview.this.worldChangeQueue.size());
-            }
+            @Override
+            public void run() {
 
-            if (Preview.this.worldChangeQueue.isEmpty()) {
-               Preview.this.sender.sendMessage(Prism.messenger.playerError(ChatColor.GRAY + "No actions found that match the criteria."));
-            } else {
-               int iterationCount = 0;
-               int currentQueueOffset = Preview.this.blockChangesRead;
-               if (currentQueueOffset < Preview.this.worldChangeQueue.size()) {
-                  Iterator iterator = Preview.this.worldChangeQueue.listIterator(currentQueueOffset);
+                if( plugin.getConfig().getBoolean( "prism.debug" ) ) {
+                    Prism.debug( "World change queue size: " + worldChangeQueue.size() );
+                }
 
-                  label93:
-                  while(true) {
-                     while(true) {
-                        if (!iterator.hasNext()) {
-                           break label93;
+                if( worldChangeQueue.isEmpty() ) {
+                    sender.sendMessage( Prism.messenger.playerError( ChatColor.GRAY
+                            + "No actions found that match the criteria." ) );
+                    return;
+                }
+
+                int iterationCount = 0;
+                final int currentQueueOffset = blockChangesRead;
+                if( currentQueueOffset < worldChangeQueue.size() ) {
+                    for ( final Iterator<Handler> iterator = worldChangeQueue.listIterator( currentQueueOffset ); iterator
+                            .hasNext(); ) {
+                        final Handler a = iterator.next();
+
+                        // Only iterate the queue using a diff offset when
+                        // previewing, actual rollbacks
+                        // will remove from the queue and we'd begin at zero
+                        // again
+                        if( is_preview )
+                            blockChangesRead++;
+
+                        // We only want to process a set number of block changes
+                        // per
+                        // schedule. Breaking here will leave the rest in the
+                        // queue.
+                        iterationCount++;
+                        if( iterationCount >= 1000 ) {
+                            break;
                         }
 
-                        Handler a = (Handler)iterator.next();
-                        if (Preview.this.is_preview) {
-                           ++Preview.this.blockChangesRead;
+                        // No sense in trying to rollback
+                        // when the type doesn't support it.
+                        if( processType.equals( PrismProcessType.ROLLBACK ) && !a.getType().canRollback() ) {
+                            iterator.remove();
+                            continue;
                         }
 
-                        ++iterationCount;
-                        if (iterationCount >= 1000) {
-                           break label93;
+                        // No sense in trying to restore
+                        // when the type doesn't support it.
+                        if( processType.equals( PrismProcessType.RESTORE ) && !a.getType().canRestore() ) {
+                            iterator.remove();
+                            continue;
                         }
 
-                        if (Preview.this.processType.equals(PrismProcessType.ROLLBACK) && !a.getType().canRollback()) {
-                           iterator.remove();
-                        } else if (Preview.this.processType.equals(PrismProcessType.RESTORE) && !a.getType().canRestore()) {
-                           iterator.remove();
-                        } else {
-                           ChangeResult result = null;
+                        /**
+                         * Reverse or restore block changes by allowing the
+                         * handler to decide what needs to happen.
+                         */
+                        ChangeResult result = null;
 
-                           try {
-                              if (Preview.this.processType.equals(PrismProcessType.ROLLBACK)) {
-                                 result = a.applyRollback(Preview.this.player, Preview.this.parameters, Preview.this.is_preview);
-                              }
+                        try {
+                            if( processType.equals( PrismProcessType.ROLLBACK ) ) {
+                                result = a.applyRollback( player, parameters, is_preview );
+                            }
+                            if( processType.equals( PrismProcessType.RESTORE ) ) {
+                                result = a.applyRestore( player, parameters, is_preview );
+                            }
+                            if( processType.equals( PrismProcessType.UNDO ) ) {
+                                result = a.applyUndo( player, parameters, is_preview );
+                            }
 
-                              if (Preview.this.processType.equals(PrismProcessType.RESTORE)) {
-                                 result = a.applyRestore(Preview.this.player, Preview.this.parameters, Preview.this.is_preview);
-                              }
+                            // No action, continue
+                            if( result == null ) {
+                                iterator.remove();
+                                continue;
+                            }
+                            // Skip actions that have not returned any results
+                            if( result.getType() == null ) {
+                                skipped_block_count++;
+                                iterator.remove();
+                                continue;
+                            }
+                            // Skipping
+                            else if( result.getType().equals( ChangeResultType.SKIPPED ) ) {
+                                skipped_block_count++;
+                                iterator.remove();
+                                continue;
+                            }
+                            // Skipping, but change planned
+                            else if( result.getType().equals( ChangeResultType.PLANNED ) ) {
+                                changes_planned_count++;
+                                continue;
+                            }
+                            // Change applied
+                            else {
+                                blockStateChanges.add( result.getBlockStateChange() );
+                                changes_applied_count++;
+                            }
+                            // Unless a preview, remove from queue
+                            if( !is_preview ) {
+                                iterator.remove();
+                            }
+                        } catch ( final Exception e ) {
 
-                              if (Preview.this.processType.equals(PrismProcessType.UNDO)) {
-                                 result = a.applyUndo(Preview.this.player, Preview.this.parameters, Preview.this.is_preview);
-                              }
+                            // Something caused an exception. We *have* to catch
+                            // this
+                            // so we can remove the item from the queue,
+                            // otherwise
+                            // the cycle will just spin in eternity and all
+                            // damnation, normally killing their server through
+                            // log files in the GB.
 
-                              if (result == null) {
-                                 iterator.remove();
-                              } else if (result.getType() == null) {
-                                 ++Preview.this.skipped_block_count;
-                                 iterator.remove();
-                              } else if (result.getType().equals(ChangeResultType.SKIPPED)) {
-                                 ++Preview.this.skipped_block_count;
-                                 iterator.remove();
-                              } else if (result.getType().equals(ChangeResultType.PLANNED)) {
-                                 ++Preview.this.changes_planned_count;
-                              } else {
-                                 Preview.this.blockStateChanges.add(result.getBlockStateChange());
-                                 ++Preview.this.changes_applied_count;
-                                 if (!Preview.this.is_preview) {
-                                    iterator.remove();
-                                 }
-                              }
-                           } catch (Exception var7) {
-                              Prism.log("Applier error: " + var7.getMessage());
-                              var7.printStackTrace();
-                              ++Preview.this.skipped_block_count;
-                              iterator.remove();
-                           }
+                            // Log the error so they have something to report
+                            Prism.log( "Applier error: " + e.getMessage() );
+                            e.printStackTrace();
+
+                            // Count as skipped, remove from queue
+                            skipped_block_count++;
+                            iterator.remove();
+
                         }
-                     }
-                  }
-               }
+                    }
+                }
 
-               if (Preview.this.worldChangeQueue.isEmpty() || Preview.this.blockChangesRead >= Preview.this.worldChangeQueue.size()) {
-                  Preview.this.plugin.getServer().getScheduler().cancelTask(Preview.this.worldChangeQueueTaskId);
-                  if (Preview.this.is_preview) {
-                     Preview.this.postProcessPreview();
-                  } else {
-                     Preview.this.postProcess();
-                  }
-               }
-
+                // The task for this action is done being used
+                if( worldChangeQueue.isEmpty() || blockChangesRead >= worldChangeQueue.size() ) {
+                    plugin.getServer().getScheduler().cancelTask( worldChangeQueueTaskId );
+                    if( is_preview ) {
+                        postProcessPreview();
+                    } else {
+                        postProcess();
+                    }
+                }
             }
-         }
-      }, 2L, 2L);
-   }
+        }, 2L, 2L );
+    }
 
-   public void postProcessPreview() {
-      if (this.is_preview && (this.changes_applied_count > 0 || this.changes_planned_count > 0)) {
-         PreviewSession ps = new PreviewSession(this.player, this);
-         this.plugin.playerActivePreviews.put(this.player.getName(), ps);
-         this.moveEntitiesToSafety();
-      }
+    /**
+     * Store the preview session for later use
+     */
+    public void postProcessPreview() {
+        // If there's planned changes, save the preview
+        if( is_preview && ( changes_applied_count > 0 || changes_planned_count > 0 ) ) {
+            // Append the preview and blocks temporarily
+            final PreviewSession ps = new PreviewSession( player, this );
+            plugin.playerActivePreviews.put( player.getName(), ps );
+            moveEntitiesToSafety();
+        }
+        fireApplierCallback();
+    }
 
-      this.fireApplierCallback();
-   }
+    /**
+     * 
+     * @return
+     */
+    public void postProcess() {
 
-   public void postProcess() {
-      if (this.processType.equals(PrismProcessType.ROLLBACK)) {
-      }
+        // POST ROLLBACK TRIGGERS
+        if( processType.equals( PrismProcessType.ROLLBACK ) ) {
 
-      this.moveEntitiesToSafety();
-      this.fireApplierCallback();
-   }
+            // We're going to modify the action type of the query params
+            // and pass it along to a restore.
+            // NOTE: These params have been modified from original, so
+            // do NOT use the object for original params.
 
-   protected void moveEntitiesToSafety() {
-      if (this.parameters.getWorld() != null && this.player != null) {
-         List entities = this.player.getNearbyEntities((double)this.parameters.getRadius(), (double)this.parameters.getRadius(), (double)this.parameters.getRadius());
-         entities.add(this.player);
-         Iterator i$ = entities.iterator();
+            // /**
+            // * If we've rolled back any containers we need to restore
+            // item-removes.
+            // */
+            // if(parameters.shouldTriggerRollbackFor(ActionType.ITEM_REMOVE)){
+            //
+            // Prism.debug("Action being rolled back triggers a second rollback: Item Remove");
+            //
+            // QueryParameters triggerParameters;
+            // try {
+            // triggerParameters = parameters.clone();
+            // triggerParameters.resetActionTypes();
+            // triggerParameters.addActionType(ActionType.ITEM_REMOVE);
+            //
+            // ActionsQuery aq = new ActionsQuery(plugin);
+            // QueryResult results = aq.lookup( player, triggerParameters );
+            // if(!results.getActionResults().isEmpty()){
+            // Rollback rb = new Rollback( plugin, player,
+            // results.getActionResults(), triggerParameters );
+            // rb.apply();
+            // }
+            // } catch (CloneNotSupportedException e) {
+            // e.printStackTrace();
+            // }
+            // }
+        }
 
-         while(true) {
-            Entity entity;
-            int add;
-            do {
-               do {
-                  if (!i$.hasNext()) {
-                     return;
-                  }
+        moveEntitiesToSafety();
 
-                  entity = (Entity)i$.next();
-               } while(!(entity instanceof LivingEntity));
+        fireApplierCallback();
 
-               add = 0;
-            } while(!EntityUtils.inCube(this.parameters.getPlayerLocation(), this.parameters.getRadius(), entity.getLocation()));
+    }
 
-            Location l = entity.getLocation();
-
-            while(!EntityUtils.playerMayPassThrough(l.getBlock().getType())) {
-               ++add;
-               if (l.getY() >= 256.0) {
-                  break;
-               }
-
-               l.setY(l.getY() + 1.0);
+    /**
+	 * 
+	 */
+    protected void moveEntitiesToSafety() {
+        if( parameters.getWorld() != null && player != null ) {
+            final List<Entity> entities = player.getNearbyEntities( parameters.getRadius(), parameters.getRadius(),
+                    parameters.getRadius() );
+            entities.add( player );
+            for ( final Entity entity : entities ) {
+                if( entity instanceof LivingEntity ) {
+                    int add = 0;
+                    if( EntityUtils.inCube( parameters.getPlayerLocation(), parameters.getRadius(),
+                            entity.getLocation() ) ) {
+                        final Location l = entity.getLocation();
+                        while ( !EntityUtils.playerMayPassThrough( l.getBlock().getType() ) ) {
+                            add++;
+                            if( l.getY() >= 256 )
+                                break;
+                            l.setY( l.getY() + 1 );
+                        }
+                        if( add > 0 ) {
+                            entities_moved.put( entity, add );
+                            entity.teleport( l );
+                        }
+                    }
+                }
             }
+        }
+    }
 
-            if (add > 0) {
-               this.entities_moved.put(entity, add);
-               entity.teleport(l);
-            }
-         }
-      }
-   }
+    /**
+	 * 
+	 */
+    public void fireApplierCallback() {
 
-   public void fireApplierCallback() {
-      if (this.is_preview) {
-         this.changes_planned_count += this.changes_applied_count;
-         this.changes_applied_count = 0;
-      }
+        // If previewing, the applied count will never apply, we'll
+        // assume it's all planned counts
+        if( is_preview ) {
+            changes_planned_count += changes_applied_count;
+            changes_applied_count = 0;
+        }
 
-      ApplierResult results = new ApplierResult(this.is_preview, this.changes_applied_count, this.skipped_block_count, this.changes_planned_count, this.blockStateChanges, this.parameters, this.entities_moved);
-      if (this.callback != null) {
-         this.callback.handle(this.sender, results);
-      }
+        final ApplierResult results = new ApplierResult( is_preview, changes_applied_count, skipped_block_count,
+                changes_planned_count, blockStateChanges, parameters, entities_moved );
 
-      if (this.processType.equals(PrismProcessType.ROLLBACK)) {
-         PrismBlocksRollbackEvent event = new PrismBlocksRollbackEvent(this.blockStateChanges, this.player, this.parameters, results);
-         this.plugin.getServer().getPluginManager().callEvent(event);
-      }
+        if( callback != null ) {
+            callback.handle( sender, results );
+        }
 
-      this.plugin.eventTimer.recordTimedEvent("applier function complete");
-      if (this.plugin.getConfig().getBoolean("prism.debug")) {
-         this.plugin.eventTimer.printTimeRecord();
-         Prism.debug("Changes: " + this.changes_applied_count);
-         Prism.debug("Planned: " + this.changes_planned_count);
-         Prism.debug("Skipped: " + this.skipped_block_count);
-      }
+        // Trigger the events
+        if( processType.equals( PrismProcessType.ROLLBACK ) ) {
+            final PrismBlocksRollbackEvent event = new PrismBlocksRollbackEvent( blockStateChanges, player, parameters,
+                    results );
+            plugin.getServer().getPluginManager().callEvent( event );
+        }
 
-   }
+        plugin.eventTimer.recordTimedEvent( "applier function complete" );
+
+        // record timed events to log
+        if( plugin.getConfig().getBoolean( "prism.debug" ) ) {
+            // Flush timed data
+            plugin.eventTimer.printTimeRecord();
+            Prism.debug( "Changes: " + changes_applied_count );
+            Prism.debug( "Planned: " + changes_planned_count );
+            Prism.debug( "Skipped: " + skipped_block_count );
+        }
+    }
 }

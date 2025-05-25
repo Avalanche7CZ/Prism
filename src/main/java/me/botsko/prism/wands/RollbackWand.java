@@ -1,6 +1,11 @@
 package me.botsko.prism.wands;
 
-import java.util.Iterator;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.ActionsQuery;
 import me.botsko.prism.actionlibs.QueryParameters;
@@ -8,83 +13,111 @@ import me.botsko.prism.actionlibs.QueryResult;
 import me.botsko.prism.appliers.PrismApplierCallback;
 import me.botsko.prism.appliers.PrismProcessType;
 import me.botsko.prism.appliers.Rollback;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
 
 public class RollbackWand extends QueryWandBase implements Wand {
-   protected boolean item_given = false;
 
-   public RollbackWand(Prism plugin) {
-      super(plugin);
-   }
+    /**
+	 * 
+	 */
+    protected boolean item_given = false;
 
-   public void playerLeftClick(Player player, Location loc) {
-      if (loc != null) {
-         this.rollback(player, loc);
-      }
+    /**
+     * 
+     * @param plugin
+     * @return
+     */
+    public RollbackWand(Prism plugin) {
+        super( plugin );
+    }
 
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public void playerLeftClick(Player player, Location loc) {
+        if( loc != null ) {
+            rollback( player, loc );
+        }
+    }
 
-   public void playerRightClick(Player player, Location loc) {
-      if (loc != null) {
-         this.rollback(player, loc);
-      }
+    /**
+	 * 
+	 */
+    @Override
+    public void playerRightClick(Player player, Location loc) {
+        if( loc != null ) {
+            rollback( player, loc );
+        }
+    }
 
-   }
+    /**
+     * 
+     * @param player
+     * @param block
+     */
+    protected void rollback(Player player, Location loc) {
 
-   protected void rollback(Player player, Location loc) {
-      Block block = loc.getBlock();
-      this.plugin.eventTimer.recordTimedEvent("rollback wand used");
+        final Block block = loc.getBlock();
 
-      QueryParameters params;
-      try {
-         params = this.parameters.clone();
-      } catch (CloneNotSupportedException var9) {
-         params = new QueryParameters();
-         player.sendMessage(Prism.messenger.playerError("Error retrieving parameters. Checking with default parameters."));
-      }
+        plugin.eventTimer.recordTimedEvent( "rollback wand used" );
 
-      params.setWorld(player.getWorld().getName());
-      params.setSpecificBlockLocation(block.getLocation());
-      params.setLimit(1);
-      params.setProcessType(PrismProcessType.ROLLBACK);
-      boolean timeDefault = false;
-      Iterator i$ = params.getDefaultsUsed().iterator();
+        // Build params
+        QueryParameters params;
+        try {
+            params = parameters.clone();
+        } catch ( final CloneNotSupportedException ex ) {
+            params = new QueryParameters();
+            player.sendMessage( Prism.messenger
+                    .playerError( "Error retrieving parameters. Checking with default parameters." ) );
+        }
+        params.setWorld( player.getWorld().getName() );
+        params.setSpecificBlockLocation( block.getLocation() );
+        params.setLimit( 1 );
+        params.setProcessType( PrismProcessType.ROLLBACK );
 
-      while(i$.hasNext()) {
-         String _default = (String)i$.next();
-         if (_default.startsWith("t:")) {
-            timeDefault = true;
-         }
-      }
+        boolean timeDefault = false;
+        for ( final String _default : params.getDefaultsUsed() ) {
+            if( _default.startsWith( "t:" ) ) {
+                timeDefault = true;
+            }
+        }
+        if( timeDefault ) {
+            params.setIgnoreTime( true );
+        }
 
-      if (timeDefault) {
-         params.setIgnoreTime(true);
-      }
+        final ActionsQuery aq = new ActionsQuery( plugin );
+        final QueryResult results = aq.lookup( params, player );
+        if( !results.getActionResults().isEmpty() ) {
+            final Rollback rb = new Rollback( plugin, player, results.getActionResults(), params,
+                    new PrismApplierCallback() );
+            rb.apply();
+        } else {
+            final String space_name = ( block.getType().equals( Material.AIR ) ? "space" : block.getType().toString()
+                    .replaceAll( "_", " " ).toLowerCase()
+                    + ( block.getType().toString().endsWith( "BLOCK" ) ? "" : " block" ) );
+            player.sendMessage( Prism.messenger.playerError( "Nothing to rollback for this " + space_name + " found." ) );
+        }
+    }
 
-      ActionsQuery aq = new ActionsQuery(this.plugin);
-      QueryResult results = aq.lookup(params, player);
-      if (!results.getActionResults().isEmpty()) {
-         Rollback rb = new Rollback(this.plugin, player, results.getActionResults(), params, new PrismApplierCallback());
-         rb.apply();
-      } else {
-         String space_name = block.getType().equals(Material.AIR) ? "space" : block.getType().toString().replaceAll("_", " ").toLowerCase() + (block.getType().toString().endsWith("BLOCK") ? "" : " block");
-         player.sendMessage(Prism.messenger.playerError("Nothing to rollback for this " + space_name + " found."));
-      }
+    /**
+	 * 
+	 */
+    @Override
+    public void playerRightClick(Player player, Entity entity) {}
 
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public void setItemWasGiven(boolean given) {
+        this.item_given = given;
+    }
 
-   public void playerRightClick(Player player, Entity entity) {
-   }
-
-   public void setItemWasGiven(boolean given) {
-      this.item_given = given;
-   }
-
-   public boolean itemWasGiven() {
-      return this.item_given;
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public boolean itemWasGiven() {
+        return item_given;
+    }
 }

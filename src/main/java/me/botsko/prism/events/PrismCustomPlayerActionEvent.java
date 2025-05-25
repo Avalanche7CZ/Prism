@@ -7,40 +7,71 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
 public class PrismCustomPlayerActionEvent extends Event {
-   private static final HandlerList handlers = new HandlerList();
-   private final String plugin_name;
-   private final String action_type_name;
-   private final Player player;
-   private final String message;
 
-   public PrismCustomPlayerActionEvent(Plugin plugin, String action_type_name, Player player, String message) {
-      this.plugin_name = plugin.getName();
-      this.action_type_name = action_type_name;
-      this.player = player;
-      this.message = message + ChatColor.GOLD + " [" + this.plugin_name + "]" + ChatColor.DARK_AQUA;
-   }
+    private static final HandlerList handlers = new HandlerList();
+    private final String plugin_name;
+    private final String action_type_name;
+    private final Player player;
+    private final String message;
 
-   public String getPluginName() {
-      return this.plugin_name;
-   }
+    /**
+     * 
+     * @param plugin
+     * @param action_type_name
+     * @param player
+     * @param message
+     */
+    public PrismCustomPlayerActionEvent(Plugin plugin, String action_type_name, Player player, String message) {
+        this.plugin_name = plugin.getName();
+        this.action_type_name = action_type_name;
+        this.player = player;
+        this.message = message + ChatColor.GOLD + " [" + this.plugin_name + "]" + ChatColor.DARK_AQUA;
+    }
 
-   public String getActionTypeName() {
-      return this.action_type_name;
-   }
+    /**
+     * 
+     * @return
+     */
+    public String getPluginName() {
+        return plugin_name;
+    }
 
-   public Player getPlayer() {
-      return this.player;
-   }
+    /**
+     * 
+     * @return
+     */
+    public String getActionTypeName() {
+        return action_type_name;
+    }
 
-   public String getMessage() {
-      return this.message;
-   }
+    /**
+     * @return the player
+     */
+    public Player getPlayer() {
+        return player;
+    }
 
-   public HandlerList getHandlers() {
-      return handlers;
-   }
+    /**
+     * @return the message
+     */
+    public String getMessage() {
+        return message;
+    }
 
-   public static HandlerList getHandlerList() {
-      return handlers;
-   }
+    /**
+     * Required by bukkit for proper event handling.
+     */
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
+    }
+
+    /**
+     * Required by bukkit for proper event handling.
+     * 
+     * @return
+     */
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 }

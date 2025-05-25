@@ -1,65 +1,168 @@
 package me.botsko.prism.actionlibs;
 
 public class ActionType {
-   private final boolean doesCreateBlock;
-   private final boolean canRollback;
-   private final boolean canRestore;
-   private final String handler;
-   private final String niceDescription;
-   private final String name;
 
-   public ActionType(String name, String handler, String niceDescription) {
-      this(name, false, false, false, handler, niceDescription);
-   }
+    /**
+     * Define associated values
+     */
+    private final boolean doesCreateBlock;
+    private final boolean canRollback;
+    private final boolean canRestore;
+    private final String handler;
+    private final String niceDescription;
+    private final String name;
 
-   public ActionType(String name, boolean doesCreateBlock, boolean canRollback, boolean canRestore, String handler, String niceDescription) {
-      this.doesCreateBlock = doesCreateBlock;
-      this.canRollback = canRollback;
-      this.canRestore = canRestore;
-      this.handler = handler;
-      this.niceDescription = niceDescription;
-      this.name = name;
-   }
+    /**
+     * 
+     * @param name
+     * @param handler
+     * @param niceDescription
+     */
+    public ActionType(String name, String handler, String niceDescription) {
+        this( name, false, false, false, handler, niceDescription );
+    }
 
-   public boolean canRollback() {
-      return this.canRollback;
-   }
+    /**
+     * 
+     * @param name
+     * @param doesCreateBlock
+     * @param canRollback
+     * @param canRestore
+     * @param niceDescription
+     */
+    public ActionType(String name, boolean doesCreateBlock, boolean canRollback, boolean canRestore, String handler,
+            String niceDescription) {
+        this.doesCreateBlock = doesCreateBlock;
+        this.canRollback = canRollback;
+        this.canRestore = canRestore;
+        this.handler = handler;
+        this.niceDescription = niceDescription;
+        this.name = name;
+    }
 
-   public boolean canRestore() {
-      return this.canRestore;
-   }
+    /**
+     * @return the canRollback
+     */
+    public boolean canRollback() {
+        return canRollback;
+    }
 
-   public String getHandler() {
-      return this.handler;
-   }
+    /**
+     * @return the canRestore
+     */
+    public boolean canRestore() {
+        return canRestore;
+    }
 
-   public String getNiceDescription() {
-      return this.niceDescription;
-   }
+    /**
+     * @return the niceDescription
+     */
+    public String getHandler() {
+        return handler;
+    }
 
-   public boolean requiresHandler(String handler) {
-      return this.getHandler() != null && this.getHandler().equals(handler);
-   }
+    /**
+     * @return the niceDescription
+     */
+    public String getNiceDescription() {
+        return niceDescription;
+    }
 
-   public boolean doesCreateBlock() {
-      return this.doesCreateBlock;
-   }
+    /**
+     * 
+     * @param handler
+     * @return
+     */
+    public boolean requiresHandler(String handler) {
+        return ( getHandler() != null && getHandler().equals( handler ) );
+    }
 
-   public String getName() {
-      return this.name;
-   }
+    /**
+     * 
+     * @return
+     */
+    public boolean doesCreateBlock() {
+        return doesCreateBlock;
+    }
 
-   public String getFamilyName() {
-      String[] _tmp = this.name.toLowerCase().split("-(?!.*-.*)");
-      return _tmp.length == 2 ? _tmp[0] : this.name;
-   }
+    /**
+     * 
+     * @return
+     */
+    public String getName() {
+        return name;
+    }
 
-   public String getShortName() {
-      String[] _tmp = this.name.toLowerCase().split("-(?!.*-.*)");
-      return _tmp.length == 2 ? _tmp[1] : this.name;
-   }
+    /**
+     * 
+     * @return
+     */
+    public String getFamilyName() {
+        final String[] _tmp = this.name.toLowerCase().split( "-(?!.*-.*)" );
+        if( _tmp.length == 2 ) { return _tmp[0]; }
+        return name;
+    }
 
-   public boolean shouldTriggerRollbackFor(String at) {
-      return false;
-   }
+    /**
+     * 
+     * @return
+     */
+    public String getShortName() {
+        final String[] _tmp = this.name.toLowerCase().split( "-(?!.*-.*)" );
+        if( _tmp.length == 2 ) { return _tmp[1]; }
+        return name;
+    }
+
+    // /**
+    // * Returns whether or not an action type should also
+    // * trigger a restore action after an applier.
+    // *
+    // * This is a pretty inefficient way to define the
+    // * relationships but it's really the only way I
+    // * can think of atm.
+    // *
+    // * @param at
+    // * @return
+    // */
+    // public boolean shouldTriggerRestoreFor(String at){
+    //
+    // // Actions that should trigger sign changes
+    // if(at.equals("sign-change")){
+    // if( this.name.equals("block-break")
+    // || this.name.equals("block-burn")
+    // || this.name.equals("creeper-explode")
+    // || this.name.equals("enderman-pickup")
+    // || this.name.equals("tnt-explode")){
+    // return true;
+    // }
+    // }
+    // return false;
+    // }
+
+    /**
+     * Returns whether or not an action type should also trigger a rollback
+     * action after an applier.
+     * 
+     * This is a pretty inefficient way to define the relationships but it's
+     * really the only way I can think of atm.
+     * 
+     * @param at
+     * @return
+     */
+    public boolean shouldTriggerRollbackFor(String at) {
+
+        // // Actions that should trigger item removal rollback
+        // if(at.equals(ActionType.ITEM_REMOVE)){
+        // switch(this){
+        // case BLOCK_BREAK:
+        // case BLOCK_BURN:
+        // case CREEPER_EXPLODE:
+        // case TNT_EXPLODE:
+        // return true;
+        // default:
+        // return false;
+        // }
+        // }
+        return false;
+    }
 }

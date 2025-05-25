@@ -6,9 +6,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
+
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
 import me.botsko.prism.Prism;
 import me.botsko.prism.actions.Handler;
 import me.botsko.prism.actions.PrismProcessAction;
@@ -16,338 +19,367 @@ import me.botsko.prism.appliers.PrismProcessType;
 import me.botsko.prism.commandlibs.Flag;
 import me.botsko.prism.database.mysql.DeleteQueryBuilder;
 import me.botsko.prism.database.mysql.SelectQueryBuilder;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
 public class ActionsQuery {
-   private final Prism plugin;
-   private final SelectQueryBuilder qb;
-   private boolean shouldGroup = false;
 
-   public ActionsQuery(Prism plugin) {
-      this.plugin = plugin;
-      this.qb = new SelectQueryBuilder(plugin);
-   }
+    /**
+	 * 
+	 */
+    private final Prism plugin;
 
-   public QueryResult lookup(QueryParameters parameters) {
-      return this.lookup(parameters, (CommandSender)null);
-   }
+    /**
+	 * 
+	 */
+    private final SelectQueryBuilder qb;
 
-   public QueryResult lookup(QueryParameters parameters, CommandSender sender) {
-      Player player = null;
-      if (sender instanceof Player) {
-         player = (Player)sender;
-      }
+    /**
+	 * 
+	 */
+    private boolean shouldGroup = false;
 
-      this.shouldGroup = false;
-      if (parameters.getProcessType().equals(PrismProcessType.LOOKUP)) {
-         this.shouldGroup = true;
-         if (!this.plugin.getConfig().getBoolean("prism.queries.lookup-auto-group")) {
-            this.shouldGroup = false;
-         }
+    /**
+     * 
+     * @param plugin
+     * @return
+     */
+    public ActionsQuery(Prism plugin) {
+        this.plugin = plugin;
+        this.qb = new SelectQueryBuilder( plugin );
+    }
 
-         if (parameters.hasFlag(Flag.NO_GROUP) || parameters.hasFlag(Flag.EXTENDED)) {
-            this.shouldGroup = false;
-         }
-      }
+    /**
+     * 
+     * @return
+     */
+    public QueryResult lookup(QueryParameters parameters) {
+        return lookup( parameters, null );
+    }
 
-      List actions = new ArrayList();
-      String query = this.qb.getQuery(parameters, this.shouldGroup);
-      if (query != null) {
-         Connection conn = null;
-         PreparedStatement s = null;
-         ResultSet rs = null;
+    /**
+     * 
+     * @return
+     */
+    public QueryResult lookup(QueryParameters parameters, CommandSender sender) {
 
-         try {
-            this.plugin.eventTimer.recordTimedEvent("query started");
-            conn = Prism.dbc();
-            if (conn == null || conn.isClosed()) {
-               if (RecordingManager.failedDbConnectionCount == 0) {
-                  Prism.log("Prism database error. Connection should be there but it's not. Leaving actions to log in queue.");
-               }
+        Player player = null;
+        if( sender instanceof Player ) {
+            player = (Player) sender;
+        }
 
-               ++RecordingManager.failedDbConnectionCount;
-               sender.sendMessage(Prism.messenger.playerError("Database connection was closed, please wait and try again."));
-               QueryResult var41 = new QueryResult(actions, parameters);
-               return var41;
+        // If lookup, determine if we need to group
+        shouldGroup = false;
+        if( parameters.getProcessType().equals( PrismProcessType.LOOKUP ) ) {
+            shouldGroup = true;
+            // What to default to
+            if( !plugin.getConfig().getBoolean( "prism.queries.lookup-auto-group" ) ) {
+                shouldGroup = false;
             }
+            // Any overriding flags passed?
+            if( parameters.hasFlag( Flag.NO_GROUP ) || parameters.hasFlag( Flag.EXTENDED ) ) {
+                shouldGroup = false;
+            }
+        }
 
-            RecordingManager.failedDbConnectionCount = 0;
-            s = conn.prepareStatement(query);
-            rs = s.executeQuery();
-            this.plugin.eventTimer.recordTimedEvent("query returned, building results");
+        // Pull results
+        final List<Handler> actions = new ArrayList<Handler>();
 
-            label369:
-            while(true) {
-               while(true) {
-                  do {
-                     if (!rs.next()) {
-                        break label369;
-                     }
-                  } while(rs.getString(3) == null);
+        // Build conditions based off final args
+        final String query = qb.getQuery( parameters, shouldGroup );
 
-                  String actionName = "";
-                  Iterator i$ = Prism.prismActions.entrySet().iterator();
+        if( query != null ) {
+            Connection conn = null;
+            PreparedStatement s = null;
+            ResultSet rs = null;
+            try {
 
-                  while(i$.hasNext()) {
-                     Map.Entry entry = (Map.Entry)i$.next();
-                     if ((Integer)entry.getValue() == rs.getInt(3)) {
-                        actionName = (String)entry.getKey();
-                     }
-                  }
+                plugin.eventTimer.recordTimedEvent( "query started" );
 
-                  if (actionName.isEmpty()) {
-                     Prism.log("Record contains action ID that doesn't exist in cache: " + rs.getInt(3));
-                  } else {
-                     ActionType actionType = Prism.getActionRegistry().getAction(actionName);
-                     if (actionType != null) {
-                        try {
-                           Handler baseHandler = Prism.getHandlerRegistry().getHandler(actionType.getHandler());
-                           String worldName = "";
-                           Iterator i$ = Prism.prismWorlds.entrySet().iterator();
+                conn = Prism.dbc();
 
-                           while(i$.hasNext()) {
-                              Map.Entry entry = (Map.Entry)i$.next();
-                              if ((Integer)entry.getValue() == rs.getInt(5)) {
-                                 worldName = (String)entry.getKey();
-                              }
-                           }
+                // Handle dead connections
+                if( conn == null || conn.isClosed() ) {
+                    if( RecordingManager.failedDbConnectionCount == 0 ) {
+                        Prism.log( "Prism database error. Connection should be there but it's not. Leaving actions to log in queue." );
+                    }
+                    RecordingManager.failedDbConnectionCount++;
+                    sender.sendMessage( Prism.messenger
+                            .playerError( "Database connection was closed, please wait and try again." ) );
+                    return new QueryResult( actions, parameters );
+                } else {
+                    RecordingManager.failedDbConnectionCount = 0;
+                }
 
-                           baseHandler.setPlugin(this.plugin);
-                           baseHandler.setType(actionType);
-                           baseHandler.setId(rs.getInt(1));
-                           baseHandler.setUnixEpoch(rs.getString(2));
-                           baseHandler.setPlayerName(rs.getString(4));
-                           baseHandler.setWorldName(worldName);
-                           baseHandler.setX((double)rs.getInt(6));
-                           baseHandler.setY((double)rs.getInt(7));
-                           baseHandler.setZ((double)rs.getInt(8));
-                           baseHandler.setBlockId(rs.getInt(9));
-                           baseHandler.setBlockSubId(rs.getInt(10));
-                           baseHandler.setOldBlockId(rs.getInt(11));
-                           baseHandler.setOldBlockSubId(rs.getInt(12));
-                           baseHandler.setData(rs.getString(13));
-                           baseHandler.setMaterialAliases(Prism.getItems());
-                           int aggregated = 0;
-                           if (this.shouldGroup) {
-                              aggregated = rs.getInt(14);
-                           }
+                s = conn.prepareStatement( query );
+                rs = s.executeQuery();
 
-                           baseHandler.setAggregateCount(aggregated);
-                           actions.add(baseHandler);
-                        } catch (Exception var35) {
-                           if (!rs.isClosed()) {
-                              Prism.log("Ignoring data from record #" + rs.getInt(1) + " because it caused an error:");
-                           }
+                plugin.eventTimer.recordTimedEvent( "query returned, building results" );
 
-                           var35.printStackTrace();
+                while ( rs.next() ) {
+
+                    if( rs.getString( 3 ) == null )
+                        continue;
+
+                    // Convert action ID to name
+                    // Performance-wise this is a lot faster than table joins
+                    // and the cache data should always be available
+                    String actionName = "";
+                    for ( final Entry<String, Integer> entry : Prism.prismActions.entrySet() ) {
+                        if( entry.getValue() == rs.getInt( 3 ) ) {
+                            actionName = entry.getKey();
                         }
-                     }
-                  }
-               }
+                    }
+                    if( actionName.isEmpty() ) {
+                        Prism.log( "Record contains action ID that doesn't exist in cache: " + rs.getInt( 3 ) );
+                        continue;
+                    }
+
+                    // Get the action handler
+                    final ActionType actionType = Prism.getActionRegistry().getAction( actionName );
+
+                    if( actionType == null )
+                        continue;
+
+                    // Prism.debug("Important: Action type '" + rs.getString(3)
+                    // +
+                    // "' has no official handling class, will be shown as generic."
+                    // );
+
+                    try {
+
+                        final Handler baseHandler = Prism.getHandlerRegistry().getHandler( actionType.getHandler() );
+
+                        // Convert world ID to name
+                        // Performance-wise this is typically a lot faster than
+                        // table joins
+                        String worldName = "";
+                        for ( final Entry<String, Integer> entry : Prism.prismWorlds.entrySet() ) {
+                            if( entry.getValue() == rs.getInt( 5 ) ) {
+                                worldName = entry.getKey();
+                            }
+                        }
+
+                        // Set all shared values
+                        baseHandler.setPlugin( plugin );
+                        baseHandler.setType( actionType );
+                        baseHandler.setId( rs.getInt( 1 ) );
+                        baseHandler.setUnixEpoch( rs.getString( 2 ) );
+                        baseHandler.setPlayerName( rs.getString( 4 ) );
+                        baseHandler.setWorldName( worldName );
+                        baseHandler.setX( rs.getInt( 6 ) );
+                        baseHandler.setY( rs.getInt( 7 ) );
+                        baseHandler.setZ( rs.getInt( 8 ) );
+                        baseHandler.setBlockId( rs.getInt( 9 ) );
+                        baseHandler.setBlockSubId( rs.getInt( 10 ) );
+                        baseHandler.setOldBlockId( rs.getInt( 11 ) );
+                        baseHandler.setOldBlockSubId( rs.getInt( 12 ) );
+                        baseHandler.setData( rs.getString( 13 ) );
+                        baseHandler.setMaterialAliases( Prism.getItems() );
+
+                        // Set aggregate counts if a lookup
+                        int aggregated = 0;
+                        if( shouldGroup ) {
+                            aggregated = rs.getInt( 14 );
+                        }
+                        baseHandler.setAggregateCount( aggregated );
+
+                        actions.add( baseHandler );
+
+                    } catch ( final Exception e ) {
+                        if( !rs.isClosed() ) {
+                            Prism.log( "Ignoring data from record #" + rs.getInt( 1 ) + " because it caused an error:" );
+                        }
+                        e.printStackTrace();
+                    }
+                }
+            } catch ( final SQLException e ) {
+                plugin.handleDatabaseException( e );
+            } finally {
+                if( rs != null )
+                    try {
+                        rs.close();
+                    } catch ( final SQLException ignored ) {}
+                if( s != null )
+                    try {
+                        s.close();
+                    } catch ( final SQLException ignored ) {}
+                if( conn != null )
+                    try {
+                        conn.close();
+                    } catch ( final SQLException ignored ) {}
             }
-         } catch (SQLException var36) {
-            this.plugin.handleDatabaseException(var36);
-         } finally {
-            if (rs != null) {
-               try {
-                  rs.close();
-               } catch (SQLException var34) {
-               }
+        }
+
+        // Build result object
+        final QueryResult res = new QueryResult( actions, parameters );
+        res.setPerPage( parameters.getPerPage() );
+
+        // Cache it if we're doing a lookup. Otherwise we don't
+        // need a cache.
+        if( parameters.getProcessType().equals( PrismProcessType.LOOKUP ) ) {
+            String keyName = "console";
+            if( player != null ) {
+                keyName = player.getName();
             }
-
-            if (s != null) {
-               try {
-                  s.close();
-               } catch (SQLException var33) {
-               }
+            if( plugin.cachedQueries.containsKey( keyName ) ) {
+                plugin.cachedQueries.remove( keyName );
             }
-
-            if (conn != null) {
-               try {
-                  conn.close();
-               } catch (SQLException var32) {
-               }
+            plugin.cachedQueries.put( keyName, res );
+            // We also need to share these results with the -share-with players.
+            for ( final CommandSender sharedPlayer : parameters.getSharedPlayers() ) {
+                plugin.cachedQueries.put( sharedPlayer.getName(), res );
             }
+        }
 
-         }
-      }
+        plugin.eventTimer.recordTimedEvent( "results object completed" );
 
-      QueryResult res = new QueryResult(actions, parameters);
-      res.setPerPage(parameters.getPerPage());
-      if (parameters.getProcessType().equals(PrismProcessType.LOOKUP)) {
-         String keyName = "console";
-         if (player != null) {
-            keyName = player.getName();
-         }
+        // Return it
+        return res;
 
-         if (this.plugin.cachedQueries.containsKey(keyName)) {
-            this.plugin.cachedQueries.remove(keyName);
-         }
+    }
 
-         this.plugin.cachedQueries.put(keyName, res);
-         Iterator i$ = parameters.getSharedPlayers().iterator();
+    /**
+     * 
+     * @param playername
+     */
+    public int getUsersLastPrismProcessId(String playername) {
+        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+        int id = 0;
+        Connection conn = null;
+        PreparedStatement s = null;
+        ResultSet rs = null;
+        try {
 
-         while(i$.hasNext()) {
-            CommandSender sharedPlayer = (CommandSender)i$.next();
-            this.plugin.cachedQueries.put(sharedPlayer.getName(), res);
-         }
-      }
+            final int action_id = Prism.prismActions.get( "prism-process" );
 
-      this.plugin.eventTimer.recordTimedEvent("results object completed");
-      return res;
-   }
+            conn = Prism.dbc();
 
-   public int getUsersLastPrismProcessId(String playername) {
-      String prefix = this.plugin.getConfig().getString("prism.mysql.prefix");
-      int id = 0;
-      Connection conn = null;
-      PreparedStatement s = null;
-      ResultSet rs = null;
+            if( conn != null && !conn.isClosed() ) {
+                s = conn.prepareStatement( "SELECT id FROM " + prefix + "data JOIN " + prefix + "players p ON p.player_id = " + prefix + "data.player_id WHERE action_id = ? AND p.player = ? ORDER BY id DESC LIMIT 1" );
+                s.setInt( 1, action_id );
+                s.setString( 2, playername );
+                s.executeQuery();
+                rs = s.getResultSet();
 
-      try {
-         int action_id = (Integer)Prism.prismActions.get("prism-process");
-         conn = Prism.dbc();
-         if (conn != null && !conn.isClosed()) {
-            s = conn.prepareStatement("SELECT id FROM " + prefix + "data JOIN " + prefix + "players p ON p.player_id = " + prefix + "data.player_id WHERE action_id = ? AND p.player = ? ORDER BY id DESC LIMIT 1");
-            s.setInt(1, action_id);
-            s.setString(2, playername);
-            s.executeQuery();
-            rs = s.getResultSet();
-            if (rs.first()) {
-               id = rs.getInt("id");
+                if( rs.first() ) {
+                    id = rs.getInt( "id" );
+                }
+            } else {
+                Prism.log( "Prism database error. getUsersLastPrismProcessId cannot continue." );
             }
-         } else {
-            Prism.log("Prism database error. getUsersLastPrismProcessId cannot continue.");
-         }
-      } catch (SQLException var24) {
-         this.plugin.handleDatabaseException(var24);
-      } finally {
-         if (rs != null) {
-            try {
-               rs.close();
-            } catch (SQLException var23) {
+        } catch ( final SQLException e ) {
+            plugin.handleDatabaseException( e );
+        } finally {
+            if( rs != null )
+                try {
+                    rs.close();
+                } catch ( final SQLException ignored ) {}
+            if( s != null )
+                try {
+                    s.close();
+                } catch ( final SQLException ignored ) {}
+            if( conn != null )
+                try {
+                    conn.close();
+                } catch ( final SQLException ignored ) {}
+        }
+        return id;
+    }
+
+    /**
+     * 
+     * @param id
+     */
+    public PrismProcessAction getPrismProcessRecord(int id) {
+        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+        PrismProcessAction process = null;
+        Connection conn = null;
+        PreparedStatement s = null;
+        ResultSet rs = null;
+        try {
+
+            String sql = "SELECT id, action, epoch, world, player, x, y, z, data FROM " + prefix + "data d";
+            // Joins
+            sql += " INNER JOIN " + prefix + "players p ON p.player_id = d.player_id ";
+            sql += " INNER JOIN " + prefix + "actions a ON a.action_id = d.action_id ";
+            sql += " INNER JOIN " + prefix + "worlds w ON w.world_id = d.world_id ";
+            sql += " LEFT JOIN " + prefix + "data_extra ex ON ex.data_id = d.id ";
+            sql += " WHERE d.id = ?";
+
+            conn = Prism.dbc();
+
+            if( conn != null && !conn.isClosed() ) {
+                s = conn.prepareStatement( sql );
+                s.setInt( 1, id );
+                s.executeQuery();
+                rs = s.getResultSet();
+
+                if( rs.first() ) {
+                    process = new PrismProcessAction();
+                    // Set all shared values
+                    process.setId( rs.getInt( "id" ) );
+                    process.setType( Prism.getActionRegistry().getAction( rs.getString( "action" ) ) );
+                    process.setUnixEpoch( rs.getString( "epoch" ) );
+                    process.setWorldName( rs.getString( "world" ) );
+                    process.setPlayerName( rs.getString( "player" ) );
+                    process.setX( rs.getInt( "x" ) );
+                    process.setY( rs.getInt( "y" ) );
+                    process.setZ( rs.getInt( "z" ) );
+                    process.setData( rs.getString( "data" ) );
+                }
+            } else {
+                Prism.log( "Prism database error. getPrismProcessRecord cannot continue." );
             }
-         }
+        } catch ( final SQLException e ) {
+            plugin.handleDatabaseException( e );
+        } finally {
+            if( rs != null )
+                try {
+                    rs.close();
+                } catch ( final SQLException ignored ) {}
+            if( s != null )
+                try {
+                    s.close();
+                } catch ( final SQLException ignored ) {}
+            if( conn != null )
+                try {
+                    conn.close();
+                } catch ( final SQLException ignored ) {}
+        }
+        return process;
+    }
 
-         if (s != null) {
-            try {
-               s.close();
-            } catch (SQLException var22) {
+    /**
+     * 
+     * @return
+     */
+    public int delete(QueryParameters parameters) {
+        int total_rows_affected = 0, cycle_rows_affected;
+        Connection conn = null;
+        Statement s = null;
+        try {
+            final DeleteQueryBuilder dqb = new DeleteQueryBuilder( plugin );
+            // Build conditions based off final args
+            final String query = dqb.getQuery( parameters, shouldGroup );
+            conn = Prism.dbc();
+            if( conn != null && !conn.isClosed() ) {
+                s = conn.createStatement();
+                cycle_rows_affected = s.executeUpdate( query );
+                total_rows_affected += cycle_rows_affected;
+            } else {
+                Prism.log( "Prism database error. Purge cannot continue." );
             }
-         }
-
-         if (conn != null) {
-            try {
-               conn.close();
-            } catch (SQLException var21) {
-            }
-         }
-
-      }
-
-      return id;
-   }
-
-   public PrismProcessAction getPrismProcessRecord(int id) {
-      String prefix = this.plugin.getConfig().getString("prism.mysql.prefix");
-      PrismProcessAction process = null;
-      Connection conn = null;
-      PreparedStatement s = null;
-      ResultSet rs = null;
-
-      try {
-         String sql = "SELECT id, action, epoch, world, player, x, y, z, data FROM " + prefix + "data d";
-         sql = sql + " INNER JOIN " + prefix + "players p ON p.player_id = d.player_id ";
-         sql = sql + " INNER JOIN " + prefix + "actions a ON a.action_id = d.action_id ";
-         sql = sql + " INNER JOIN " + prefix + "worlds w ON w.world_id = d.world_id ";
-         sql = sql + " LEFT JOIN " + prefix + "data_extra ex ON ex.data_id = d.id ";
-         sql = sql + " WHERE d.id = ?";
-         conn = Prism.dbc();
-         if (conn != null && !conn.isClosed()) {
-            s = conn.prepareStatement(sql);
-            s.setInt(1, id);
-            s.executeQuery();
-            rs = s.getResultSet();
-            if (rs.first()) {
-               process = new PrismProcessAction();
-               process.setId(rs.getInt("id"));
-               process.setType(Prism.getActionRegistry().getAction(rs.getString("action")));
-               process.setUnixEpoch(rs.getString("epoch"));
-               process.setWorldName(rs.getString("world"));
-               process.setPlayerName(rs.getString("player"));
-               process.setX((double)rs.getInt("x"));
-               process.setY((double)rs.getInt("y"));
-               process.setZ((double)rs.getInt("z"));
-               process.setData(rs.getString("data"));
-            }
-         } else {
-            Prism.log("Prism database error. getPrismProcessRecord cannot continue.");
-         }
-      } catch (SQLException var24) {
-         this.plugin.handleDatabaseException(var24);
-      } finally {
-         if (rs != null) {
-            try {
-               rs.close();
-            } catch (SQLException var23) {
-            }
-         }
-
-         if (s != null) {
-            try {
-               s.close();
-            } catch (SQLException var22) {
-            }
-         }
-
-         if (conn != null) {
-            try {
-               conn.close();
-            } catch (SQLException var21) {
-            }
-         }
-
-      }
-
-      return process;
-   }
-
-   public int delete(QueryParameters parameters) {
-      int total_rows_affected = 0;
-      Connection conn = null;
-      Statement s = null;
-
-      try {
-         DeleteQueryBuilder dqb = new DeleteQueryBuilder(this.plugin);
-         String query = dqb.getQuery(parameters, this.shouldGroup);
-         conn = Prism.dbc();
-         if (conn != null && !conn.isClosed()) {
-            s = conn.createStatement();
-            int cycle_rows_affected = s.executeUpdate(query);
-            total_rows_affected += cycle_rows_affected;
-         } else {
-            Prism.log("Prism database error. Purge cannot continue.");
-         }
-      } catch (SQLException var20) {
-         this.plugin.handleDatabaseException(var20);
-      } finally {
-         if (s != null) {
-            try {
-               s.close();
-            } catch (SQLException var19) {
-            }
-         }
-
-         if (conn != null) {
-            try {
-               conn.close();
-            } catch (SQLException var18) {
-            }
-         }
-
-      }
-
-      return total_rows_affected;
-   }
+        } catch ( final SQLException e ) {
+            plugin.handleDatabaseException( e );
+        } finally {
+            if( s != null )
+                try {
+                    s.close();
+                } catch ( final SQLException ignored ) {}
+            if( conn != null )
+                try {
+                    conn.close();
+                } catch ( final SQLException ignored ) {}
+        }
+        return total_rows_affected;
+    }
 }

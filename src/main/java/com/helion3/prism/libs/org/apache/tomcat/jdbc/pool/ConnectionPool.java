@@ -318,47 +318,45 @@ public class ConnectionPool {
                var15 = false;
             } finally {
                if (var15) {
-                  int i = 0;
-
+                  int idx = 0; // Renamed variable from 'i' to 'idx'
                   while(true) {
-                     if (i >= initialPool.length) {
+                     if (idx >= initialPool.length) {
                         ;
                      } else {
-                        if (initialPool[i] != null) {
+                        if (initialPool[idx] != null) {
                            try {
-                              this.returnConnection(initialPool[i]);
+                              this.returnConnection(initialPool[idx]);
                            } catch (Exception var16) {
                            }
                         }
 
-                        ++i;
+                        ++idx;
                      }
                   }
                }
             }
 
-            i = 0;
-
+            int idx = 0; // Renamed variable from 'i' to 'idx'
             while(true) {
-               if (i >= initialPool.length) {
+               if (idx >= initialPool.length) {
                   break label278;
                }
 
-               if (initialPool[i] != null) {
+               if (initialPool[idx] != null) {
                   try {
-                     this.returnConnection(initialPool[i]);
+                     this.returnConnection(initialPool[idx]);
                   } catch (Exception var17) {
                   }
                }
 
-               ++i;
+               ++idx;
             }
          }
 
-         for(i = 0; i < initialPool.length; ++i) {
-            if (initialPool[i] != null) {
+         for(int idx = 0; idx < initialPool.length; ++idx) { // Renamed variable from 'i' to 'idx'
+            if (initialPool[idx] != null) {
                try {
-                  this.returnConnection(initialPool[i]);
+                  this.returnConnection(initialPool[idx]);
                } catch (Exception var18) {
                }
             }
@@ -979,6 +977,7 @@ public class ConnectionPool {
 
       }
 
+      @Override
       public void run() {
          ConnectionPool pool = (ConnectionPool)this.pool.get();
          if (pool == null) {
@@ -1033,6 +1032,7 @@ public class ConnectionPool {
          this.configured.set(true);
       }
 
+      @Override
       public boolean cancel(boolean mayInterruptIfRunning) {
          if (this.pc != null) {
             return false;
@@ -1045,6 +1045,7 @@ public class ConnectionPool {
          }
       }
 
+      @Override
       public Connection get() throws InterruptedException, ExecutionException {
          try {
             return this.get(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
@@ -1053,6 +1054,7 @@ public class ConnectionPool {
          }
       }
 
+      @Override
       public Connection get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
          PooledConnection pc = this.pc != null ? this.pc : (PooledConnection)this.pcFuture.get(timeout, unit);
          if (pc != null) {
@@ -1083,14 +1085,17 @@ public class ConnectionPool {
          }
       }
 
+      @Override
       public boolean isCancelled() {
          return this.pc == null && (this.pcFuture.isCancelled() || this.cancelled.get());
       }
 
+      @Override
       public boolean isDone() {
          return this.pc != null || this.pcFuture.isDone();
       }
 
+      @Override
       public void run() {
          try {
             Connection con = this.get();

@@ -14,8 +14,9 @@ import java.util.Set;
 
 public final class LinkedTreeMap extends AbstractMap implements Serializable {
    private static final Comparator NATURAL_ORDER = new Comparator() {
-      public int compare(Comparable a, Comparable b) {
-         return a.compareTo(b);
+      @Override
+      public int compare(Object a, Object b) {
+         return ((Comparable)a).compareTo(b);
       }
    };
    Comparator comparator;
@@ -321,11 +322,13 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
       pivot.height = Math.max(root.height, pivotLeft != null ? pivotLeft.height : 0) + 1;
    }
 
+   @Override
    public Set entrySet() {
       EntrySet result = this.entrySet;
       return result != null ? result : (this.entrySet = new EntrySet());
    }
 
+   @Override
    public Set keySet() {
       KeySet result = this.keySet;
       return result != null ? result : (this.keySet = new KeySet());
@@ -336,48 +339,59 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
    }
 
    class KeySet extends AbstractSet {
+      @Override
       public int size() {
          return LinkedTreeMap.this.size;
       }
 
+      @Override
       public Iterator iterator() {
          return new LinkedTreeMapIterator() {
+            @Override
             public Object next() {
                return this.nextNode().key;
             }
          };
       }
 
+      @Override
       public boolean contains(Object o) {
          return LinkedTreeMap.this.containsKey(o);
       }
 
+      @Override
       public boolean remove(Object key) {
          return LinkedTreeMap.this.removeInternalByKey(key) != null;
       }
 
+      @Override
       public void clear() {
          LinkedTreeMap.this.clear();
       }
    }
 
    class EntrySet extends AbstractSet {
+      @Override
       public int size() {
          return LinkedTreeMap.this.size;
       }
 
+      @Override
       public Iterator iterator() {
          return new LinkedTreeMapIterator() {
+            @Override
             public Map.Entry next() {
                return this.nextNode();
             }
          };
       }
 
+      @Override
       public boolean contains(Object o) {
          return o instanceof Map.Entry && LinkedTreeMap.this.findByEntry((Map.Entry)o) != null;
       }
 
+      @Override
       public boolean remove(Object o) {
          if (!(o instanceof Map.Entry)) {
             return false;
@@ -392,6 +406,7 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
          }
       }
 
+      @Override
       public void clear() {
          LinkedTreeMap.this.clear();
       }
@@ -408,6 +423,7 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
          this.expectedModCount = LinkedTreeMap.this.modCount;
       }
 
+      @Override
       public final boolean hasNext() {
          return this.next != LinkedTreeMap.this.header;
       }
@@ -424,6 +440,7 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
          }
       }
 
+      @Override
       public final void remove() {
          if (this.lastReturned == null) {
             throw new IllegalStateException();
@@ -432,11 +449,6 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
             this.lastReturned = null;
             this.expectedModCount = LinkedTreeMap.this.modCount;
          }
-      }
-
-      // $FF: synthetic method
-      LinkedTreeMapIterator(Object x1) {
-         this();
       }
    }
 
@@ -465,20 +477,24 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
          next.prev = this;
       }
 
+      @Override
       public Object getKey() {
          return this.key;
       }
 
+      @Override
       public Object getValue() {
          return this.value;
       }
 
+      @Override
       public Object setValue(Object value) {
          Object oldValue = this.value;
          this.value = value;
          return oldValue;
       }
 
+      @Override
       public boolean equals(Object o) {
          if (!(o instanceof Map.Entry)) {
             return false;
@@ -513,10 +529,12 @@ public final class LinkedTreeMap extends AbstractMap implements Serializable {
          }
       }
 
+      @Override
       public int hashCode() {
          return (this.key == null ? 0 : this.key.hashCode()) ^ (this.value == null ? 0 : this.value.hashCode());
       }
 
+      @Override
       public String toString() {
          return this.key + "=" + this.value;
       }

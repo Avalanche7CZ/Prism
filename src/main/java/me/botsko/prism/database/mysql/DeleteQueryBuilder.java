@@ -3,23 +3,45 @@ package me.botsko.prism.database.mysql;
 import me.botsko.prism.Prism;
 
 public class DeleteQueryBuilder extends SelectQueryBuilder {
-   public DeleteQueryBuilder(Prism plugin) {
-      super(plugin);
-   }
 
-   public String select() {
-      return "DELETE FROM " + this.tableNameData + " USING " + this.tableNameData + " LEFT JOIN " + this.tableNameDataExtra + " ex ON (" + this.tableNameData + ".id = ex.data_id) ";
-   }
+    /**
+     * 
+     * @param plugin
+     */
+    public DeleteQueryBuilder(Prism plugin) {
+        super( plugin );
+    }
 
-   protected String group() {
-      return "";
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public String select() {
+        return "DELETE FROM " + tableNameData + " USING " + tableNameData + 
+        " LEFT JOIN " + tableNameDataExtra + " ex ON (" + tableNameData + ".id = ex.data_id) ";
+    }
 
-   protected String order() {
-      return "";
-   }
+    /**
+	 * 
+	 */
+    @Override
+    protected String group() {
+        return "";
+    }
 
-   protected String limit() {
-      return "";
-   }
+    /**
+	 * 
+	 */
+    @Override
+    protected String order() {
+        return "";
+    }
+
+    /**
+	 * 
+	 */
+    @Override
+    protected String limit() {
+        return "";
+    }
 }

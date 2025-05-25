@@ -4,49 +4,77 @@ import org.bukkit.Location;
 import org.bukkit.block.Block;
 
 public class BlockShiftAction extends GenericAction {
-   protected BlockShiftActionData actionData;
 
-   public void setBlock(Block from) {
-      this.actionData = new BlockShiftActionData();
-      if (from != null) {
-         this.block_id = from.getTypeId();
-         this.block_subid = from.getData();
-         this.actionData.x = from.getX();
-         this.actionData.y = from.getY();
-         this.actionData.z = from.getZ();
-         this.world_name = from.getWorld().getName();
-      }
+    public class BlockShiftActionData {
+        public int x;
+        public int y;
+        public int z;
+    }
 
-   }
+    /**
+	 * 
+	 */
+    protected BlockShiftActionData actionData;
 
-   public void setToLocation(Location to) {
-      if (to != null) {
-         this.x = (double)to.getBlockX();
-         this.y = (double)to.getBlockY();
-         this.z = (double)to.getBlockZ();
-      }
+    /**
+     * 
+     * @param from
+     */
+    public void setBlock(Block from) {
 
-   }
+        // Build an object for the specific details of this action
+        actionData = new BlockShiftActionData();
 
-   public void save() {
-      this.data = this.gson.toJson((Object)this.actionData);
-   }
+        // Store information for the action
+        if( from != null ) {
+            this.block_id = from.getTypeId();
+            this.block_subid = from.getData();
+            actionData.x = from.getX();
+            actionData.y = from.getY();
+            actionData.z = from.getZ();
+            this.world_name = from.getWorld().getName();
 
-   public void setData(String data) {
-      this.data = data;
-      if (data != null && data.startsWith("{")) {
-         this.actionData = (BlockShiftActionData)this.gson.fromJson(data, BlockShiftActionData.class);
-      }
+        }
+    }
 
-   }
+    /**
+     * 
+     * @param to
+     */
+    public void setToLocation(Location to) {
+        if( to != null ) {
+            this.x = to.getBlockX();
+            this.y = to.getBlockY();
+            this.z = to.getBlockZ();
+        }
+    }
 
-   public String getNiceName() {
-      return this.materialAliases.getAlias(this.block_id, this.block_subid) + " from " + this.actionData.x + " " + this.actionData.z;
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public void save() {
+        data = gson.toJson( actionData );
+    }
 
-   public class BlockShiftActionData {
-      public int x;
-      public int y;
-      public int z;
-   }
+    /**
+	 * 
+	 */
+    @Override
+    public void setData(String data) {
+        this.data = data;
+        if( data != null && data.startsWith( "{" ) ) {
+            actionData = gson.fromJson( data, BlockShiftActionData.class );
+        }
+    }
+
+    /**
+     * 
+     * @return
+     */
+    @Override
+    public String getNiceName() {
+        return this.materialAliases.getAlias( this.block_id, this.block_subid ) + " from " + actionData.x + " "
+                + actionData.z;
+    }
 }

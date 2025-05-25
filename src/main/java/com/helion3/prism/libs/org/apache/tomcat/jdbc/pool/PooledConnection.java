@@ -175,7 +175,8 @@ public class PooledConnection {
    }
 
    protected void connectUsingDriver() throws SQLException {
-      SQLException ex;
+      SQLException ex = null; // Declare ex once here and initialize to null
+
       try {
          if (this.driver == null) {
             if (log.isDebugEnabled()) {
@@ -189,13 +190,12 @@ public class PooledConnection {
             log.debug("Unable to instantiate JDBC driver.", var8);
          }
 
-         ex = new SQLException(var8.getMessage());
+         ex = new SQLException(var8.getMessage()); // Assign to ex
          ex.initCause(var8);
          throw ex;
       }
 
       String driverURL = this.poolProperties.getUrl();
-      ex = null;
       String pwd = null;
       String usr;
       if (this.getAttributes().containsKey("user")) {
@@ -236,7 +236,7 @@ public class PooledConnection {
             throw (SQLException)var7;
          }
 
-         SQLException ex = new SQLException(var7.getMessage());
+         ex = new SQLException(var7.getMessage()); // Assign to ex
          ex.initCause(var7);
          throw ex;
       }

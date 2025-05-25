@@ -3,5 +3,5 @@ package me.botsko.prism.purge;
 import me.botsko.prism.actionlibs.QueryParameters;
 
 public interface PurgeCallback {
-   void cycle(QueryParameters var1, int var2, int var3, boolean var4);
+    public void cycle(QueryParameters param, int cycle_rows_affected, int total_records_affected, boolean cycle_complete);
 }

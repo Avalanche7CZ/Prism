@@ -1,13 +1,31 @@
 package me.botsko.prism.appliers;
 
 public interface Previewable {
-   void setIsPreview(boolean var1);
 
-   void preview();
+    /**
+	 * 
+	 */
+    public void setIsPreview(boolean is_preview);
 
-   void cancel_preview();
+    /**
+     * 
+     * @return
+     */
+    public void preview();
 
-   void apply_preview();
+    /**
+	 * 
+	 */
+    public void cancel_preview();
 
-   void apply();
+    /**
+	 * 
+	 */
+    public void apply_preview();
+
+    /**
+     * 
+     * @return
+     */
+    public void apply();
 }

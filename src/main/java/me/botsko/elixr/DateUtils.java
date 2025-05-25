@@ -1,4 +1,4 @@
-package com.helion3.prism.libs.elixr;
+package me.botsko.elixr;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -12,7 +12,7 @@ public class DateUtils {
       String dateFrom = null;
       Pattern p = Pattern.compile("([0-9]+)(s|h|m|d|w)");
       Calendar cal = Calendar.getInstance();
-      String[] matches = TypeUtils.preg_match_all(p, arg_value);
+      String[] matches = com.helion3.elixr.TypeUtils.preg_match_all(p, arg_value);
       if (matches.length > 0) {
          String[] var5 = matches;
          int var6 = matches.length;

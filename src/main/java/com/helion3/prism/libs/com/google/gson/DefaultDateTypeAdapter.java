@@ -37,13 +37,15 @@ final class DefaultDateTypeAdapter implements JsonSerializer, JsonDeserializer {
       this.iso8601Format.setTimeZone(TimeZone.getTimeZone("UTC"));
    }
 
-   public JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext context) {
+   @Override
+   public JsonElement serialize(Object src, Type typeOfSrc, JsonSerializationContext context) { // Changed src to Object
       synchronized(this.localFormat) {
-         String dateFormatAsString = this.enUsFormat.format(src);
+         String dateFormatAsString = this.enUsFormat.format((Date) src); // Cast back to Date
          return new JsonPrimitive(dateFormatAsString);
       }
    }
 
+   @Override
    public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
       if (!(json instanceof JsonPrimitive)) {
          throw new JsonParseException("The date should be a string value");
@@ -86,6 +88,7 @@ final class DefaultDateTypeAdapter implements JsonSerializer, JsonDeserializer {
       }
    }
 
+   @Override
    public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append(DefaultDateTypeAdapter.class.getSimpleName());

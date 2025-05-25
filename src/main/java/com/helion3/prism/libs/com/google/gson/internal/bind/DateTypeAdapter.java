@@ -18,6 +18,7 @@ import java.util.TimeZone;
 
 public final class DateTypeAdapter extends TypeAdapter {
    public static final TypeAdapterFactory FACTORY = new TypeAdapterFactory() {
+      @Override
       public TypeAdapter create(Gson gson, TypeToken typeToken) {
          return typeToken.getRawType() == Date.class ? new DateTypeAdapter() : null;
       }
@@ -38,7 +39,8 @@ public final class DateTypeAdapter extends TypeAdapter {
       return iso8601Format;
    }
 
-   public Date read(JsonReader in) throws IOException {
+   @Override
+   public Object read(JsonReader in) throws IOException { // Changed to Object
       if (in.peek() == JsonToken.NULL) {
          in.nextNull();
          return null;
@@ -63,11 +65,12 @@ public final class DateTypeAdapter extends TypeAdapter {
       }
    }
 
-   public synchronized void write(JsonWriter out, Date value) throws IOException {
+   @Override
+   public void write(JsonWriter out, Object value) throws IOException { // Changed to Object
       if (value == null) {
          out.nullValue();
       } else {
-         String dateFormatAsString = this.enUsFormat.format(value);
+         String dateFormatAsString = this.enUsFormat.format((Date) value); // Cast back to Date
          out.value(dateFormatAsString);
       }
    }

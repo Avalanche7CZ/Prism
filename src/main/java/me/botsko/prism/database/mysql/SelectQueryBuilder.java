@@ -1,348 +1,461 @@
 package me.botsko.prism.database.mysql;
 
-import com.helion3.prism.libs.elixr.TypeUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
+
+import org.bukkit.Location;
+import org.bukkit.util.Vector;
+
+import me.botsko.elixr.TypeUtils;
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.MatchRule;
 import me.botsko.prism.appliers.PrismProcessType;
 import me.botsko.prism.database.QueryBuilder;
-import org.bukkit.Location;
-import org.bukkit.util.Vector;
 
 public class SelectQueryBuilder extends QueryBuilder {
-   private final String prefix;
 
-   public SelectQueryBuilder(Prism plugin) {
-      super(plugin);
-      this.prefix = Prism.config.getString("prism.mysql.prefix");
-   }
+    private final String prefix;
 
-   protected String select() {
-      String query = "";
-      query = query + "SELECT ";
-      this.columns.add("id");
-      this.columns.add("epoch");
-      this.columns.add("action_id");
-      this.columns.add("player");
-      this.columns.add("world_id");
-      if (this.shouldGroup) {
-         this.columns.add("AVG(x)");
-         this.columns.add("AVG(y)");
-         this.columns.add("AVG(z)");
-      } else {
-         this.columns.add("x");
-         this.columns.add("y");
-         this.columns.add("z");
-      }
+    /**
+     * 
+     * @param plugin
+     */
+    public SelectQueryBuilder(Prism plugin) {
+        super( plugin );
+        prefix = Prism.config.getString("prism.mysql.prefix");
+    }
 
-      this.columns.add("block_id");
-      this.columns.add("block_subid");
-      this.columns.add("old_block_id");
-      this.columns.add("old_block_subid");
-      this.columns.add("data");
-      if (this.shouldGroup) {
-         this.columns.add("COUNT(*) counted");
-      }
+    /**
+     * 
+     * @return
+     */
+    @Override
+    protected String select() {
 
-      if (this.columns.size() > 0) {
-         query = query + TypeUtils.join(this.columns, ", ");
-      }
+        String query = "";
 
-      query = query + " FROM " + this.tableNameData + " ";
-      query = query + "INNER JOIN " + this.prefix + "players p ON p.player_id = " + this.tableNameData + ".player_id ";
-      query = query + "LEFT JOIN " + this.tableNameDataExtra + " ex ON ex.data_id = " + this.tableNameData + ".id ";
-      return query;
-   }
+        query += "SELECT ";
 
-   protected String where() {
-      int id = this.parameters.getId();
-      if (id > 0) {
-         return "WHERE " + this.tableNameData + ".id = " + id;
-      } else {
-         int minId = this.parameters.getMinPrimaryKey();
-         int maxId = this.parameters.getMaxPrimaryKey();
-         if (minId > 0 && maxId > 0 && minId != maxId) {
-            this.addCondition(this.tableNameData + ".id >= " + minId);
-            this.addCondition(this.tableNameData + ".id < " + maxId);
-         }
+        columns.add( "id" );
+        columns.add( "epoch" );
+        columns.add( "action_id" );
+        columns.add( "player" );
+        columns.add( "world_id" );
 
-         this.worldCondition();
-         this.actionCondition();
-         this.playerCondition();
-         this.radiusCondition();
-         this.blockCondition();
-         this.entityCondition();
-         this.timeCondition();
-         this.keywordCondition();
-         this.coordinateCondition();
-         return this.buildWhereConditions();
-      }
-   }
+        if( shouldGroup ) {
+            columns.add( "AVG(x)" );
+            columns.add( "AVG(y)" );
+            columns.add( "AVG(z)" );
+        } else {
+            columns.add( "x" );
+            columns.add( "y" );
+            columns.add( "z" );
+        }
 
-   protected void worldCondition() {
-      if (this.parameters.getWorld() != null) {
-         this.addCondition(String.format("world_id = ( SELECT w.world_id FROM " + this.prefix + "worlds w WHERE w.world = '%s')", this.parameters.getWorld()));
-      }
-   }
+        columns.add( "block_id" );
+        columns.add( "block_subid" );
+        columns.add( "old_block_id" );
+        columns.add( "old_block_subid" );
+        columns.add( "data" );
 
-   protected void actionCondition() {
-      HashMap action_types = this.parameters.getActionTypeNames();
-      boolean containsPrismProcessType = false;
-      ArrayList prismActionIds = new ArrayList();
-      Iterator prismActionsIter = Prism.prismActions.entrySet().iterator();
+        if( shouldGroup ) {
+            columns.add( "COUNT(*) counted" );
+        }
 
-      while(prismActionsIter.hasNext()) {
-         Map.Entry entry = (Map.Entry)prismActionsIter.next();
-         if (((String)entry.getKey()).contains("prism")) {
-            containsPrismProcessType = true;
-            Object actionIdObj = Prism.prismActions.get(entry.getKey());
-            if (actionIdObj != null) {
-               prismActionIds.add(actionIdObj.toString());
+        // Append all columns
+        if( columns.size() > 0 ) {
+            query += TypeUtils.join( columns, ", " );
+        }
+
+        // From
+        query += " FROM " + tableNameData + " ";
+
+        // Joins
+        query += "INNER JOIN " + prefix + "players p ON p.player_id = " + tableNameData + ".player_id ";
+        query += "LEFT JOIN " + tableNameDataExtra + " ex ON ex.data_id = " + tableNameData + ".id ";
+
+        return query;
+
+    }
+
+    /**
+     * 
+     * @return
+     */
+    @Override
+    protected String where() {
+
+        // ID Condition overrides anything else
+        final int id = parameters.getId();
+        if( id > 0 ) { return "WHERE " + tableNameData + ".id = " + id; }
+
+        // id range conditions
+        final int minId = parameters.getMinPrimaryKey();
+        final int maxId = parameters.getMaxPrimaryKey();
+        if( minId > 0 && maxId > 0 && minId != maxId ) {
+            addCondition( tableNameData + ".id >= " + minId );
+            addCondition( tableNameData + ".id < " + maxId );
+        }
+
+        worldCondition();
+        actionCondition();
+        playerCondition();
+        radiusCondition();
+        blockCondition();
+        entityCondition();
+        timeCondition();
+        keywordCondition();
+        coordinateCondition();
+
+        return buildWhereConditions();
+
+    }
+
+    /**
+	 * 
+	 */
+    protected void worldCondition() {
+        if( parameters.getWorld() != null ) {
+            addCondition( String.format( "world_id = ( SELECT w.world_id FROM " + prefix + "worlds w WHERE w.world = '%s')",
+                    parameters.getWorld() ) );
+        }
+    }
+
+    /**
+	 * 
+	 */
+    protected void actionCondition() {
+        // Action type
+        final HashMap<String, MatchRule> action_types = parameters.getActionTypeNames();
+        boolean containsPrismProcessType = false;
+
+        // Build IDs for prism process actions
+        final ArrayList<String> prismActionIds = new ArrayList<String>();
+        for ( final Entry<String, Integer> entry : Prism.prismActions.entrySet() ) {
+            if( entry.getKey().contains( "prism" ) ) {
+                containsPrismProcessType = true;
+                prismActionIds.add( "" + Prism.prismActions.get( entry.getKey() ) );
             }
-         }
-      }
+        }
 
-      if (action_types.size() > 0) {
-         ArrayList includeIds = new ArrayList();
-         ArrayList excludeIds = new ArrayList();
-         Iterator actionTypesIter = action_types.entrySet().iterator();
+        // scan whitelist of given actions
+        if( action_types.size() > 0 ) {
 
-         while(actionTypesIter.hasNext()) {
-            Map.Entry entry = (Map.Entry)actionTypesIter.next();
-            Object actionIdObj = Prism.prismActions.get(entry.getKey());
-            if (actionIdObj != null) {
-               if (((MatchRule)entry.getValue()).equals(MatchRule.INCLUDE)) {
-                  includeIds.add(actionIdObj.toString());
-               }
-               if (((MatchRule)entry.getValue()).equals(MatchRule.EXCLUDE)) {
-                  excludeIds.add(actionIdObj.toString());
-               }
+            final ArrayList<String> includeIds = new ArrayList<String>();
+            final ArrayList<String> excludeIds = new ArrayList<String>();
+            for ( final Entry<String, MatchRule> entry : action_types.entrySet() ) {
+                if( entry.getValue().equals( MatchRule.INCLUDE ) ) {
+                    includeIds.add( "" + Prism.prismActions.get( entry.getKey() ) );
+                }
+                if( entry.getValue().equals( MatchRule.EXCLUDE ) ) {
+                    excludeIds.add( "" + Prism.prismActions.get( entry.getKey() ) );
+                }
             }
-         }
+            // Include IDs
+            if( includeIds.size() > 0 ) {
+                addCondition( "action_id IN (" + TypeUtils.join( includeIds, "," ) + ")" );
+            }
+            // Exclude IDs
+            if( excludeIds.size() > 0 ) {
+                addCondition( "action_id NOT IN (" + TypeUtils.join( excludeIds, "," ) + ")" );
+            }
+        } else {
+            // exclude internal stuff
+            if( !containsPrismProcessType && !parameters.getProcessType().equals( PrismProcessType.DELETE ) ) {
+                addCondition( "action_id NOT IN (" + TypeUtils.join( prismActionIds, "," ) + ")" );
+            }
+        }
+    }
 
-         if (includeIds.size() > 0) {
-            this.addCondition("action_id IN (" + TypeUtils.join((List)includeIds, ",") + ")");
-         }
+    /**
+	 * 
+	 */
+    protected void playerCondition() {
+        final HashMap<String, MatchRule> playerNames = parameters.getPlayerNames();
+        if( playerNames.size() > 0 ) {
 
-         if (excludeIds.size() > 0) {
-            this.addCondition("action_id NOT IN (" + TypeUtils.join((List)excludeIds, ",") + ")");
-         }
-      } else if (!containsPrismProcessType && !this.parameters.getProcessType().equals(PrismProcessType.DELETE)) {
-         this.addCondition("action_id NOT IN (" + TypeUtils.join((List)prismActionIds, ",") + ")");
-      }
-   }
+            // Match the first rule, this needs to change, we can't include and
+            // exclude at the same time
+            MatchRule playerMatch = MatchRule.INCLUDE;
+            for ( final MatchRule match : playerNames.values() ) {
+                playerMatch = match;
+                break;
+            }
+            final String matchQuery = ( playerMatch.equals( MatchRule.INCLUDE ) ? "IN" : "NOT IN" );
+            // @todo Temporary band-aid. The player list should not actually exclude anyone because
+            // we're doing it here. This is going to be rewritten soon anyway.
+            for( Entry<String,MatchRule> entry : playerNames.entrySet() ){
+                entry.setValue( MatchRule.INCLUDE );
+            }
+            // Add conditions
+            addCondition( tableNameData + ".player_id " + matchQuery
+                    + " ( SELECT p.player_id FROM " + prefix + "players p WHERE "
+                    + buildMultipleConditions( playerNames, "p.player", null ) + ")" );
+        }
+    }
 
-   protected void playerCondition() {
-      HashMap playerNames = this.parameters.getPlayerNames();
-      if (playerNames.size() > 0) {
-         MatchRule playerMatch = MatchRule.INCLUDE;
-         Iterator playerValuesIter = playerNames.values().iterator();
-         if (playerValuesIter.hasNext()) {
-            MatchRule match = (MatchRule)playerValuesIter.next();
-            playerMatch = match;
-         }
+    /**
+	 * 
+	 */
+    protected void radiusCondition() {
+        buildRadiusCondition( parameters.getMinLocation(), parameters.getMaxLocation() );
+    }
 
-         String matchQuery = playerMatch.equals(MatchRule.INCLUDE) ? "IN" : "NOT IN";
+    /**
+	 * 
+	 */
+    protected void blockCondition() {
+        // Blocks
+        final HashMap<Integer, Short> blockfilters = parameters.getBlockFilters();
+        if( !blockfilters.isEmpty() ) {
+            final String[] blockArr = new String[blockfilters.size()];
+            int i = 0;
+            for ( final Entry<Integer, Short> entry : blockfilters.entrySet() ) {
+                if( entry.getValue() == 0 ) {
+                    blockArr[i] = tableNameData + ".block_id = " + entry.getKey();
+                } else {
+                    blockArr[i] = tableNameData + ".block_id = " + entry.getKey() + " AND " + tableNameData
+                            + ".block_subid = " + entry.getValue();
+                }
+                i++;
+            }
+            addCondition( buildGroupConditions( null, blockArr, "%s%s", "OR", null ) );
+        }
+    }
 
-         Iterator playerEntriesIter = playerNames.entrySet().iterator();
-         while(playerEntriesIter.hasNext()) {
-            Map.Entry entry = (Map.Entry)playerEntriesIter.next();
-            entry.setValue(MatchRule.INCLUDE);
-         }
+    /**
+	 * 
+	 */
+    protected void entityCondition() {
+        // Entity
+        final HashMap<String, MatchRule> entityNames = parameters.getEntities();
+        if( entityNames.size() > 0 ) {
+            addCondition( buildMultipleConditions( entityNames, "ex.data", "entity_name\":\"%s" ) );
+        }
+    }
 
-         this.addCondition(this.tableNameData + ".player_id " + matchQuery + " ( SELECT p.player_id FROM " + this.prefix + "players p WHERE " + this.buildMultipleConditions(playerNames, "p.player", null) + ")");
-      }
-   }
+    /**
+	 * 
+	 */
+    protected void timeCondition() {
+        // Timeframe
+        Long time = parameters.getBeforeTime();
+        if( time != null && time != 0 ) {
+            addCondition( buildTimeCondition( time, "<=" ) );
+        }
+        time = parameters.getSinceTime();
+        if( time != null && time != 0 ) {
+            addCondition( buildTimeCondition( time, null ) );
+        }
+    }
 
-   protected void radiusCondition() {
-      this.buildRadiusCondition(this.parameters.getMinLocation(), this.parameters.getMaxLocation());
-   }
+    /**
+	 * 
+	 */
+    protected void keywordCondition() {
+        // Keyword(s)
+        final String keyword = parameters.getKeyword();
+        if( keyword != null ) {
+            addCondition( "ex.data LIKE '%" + keyword + "%'" );
+        }
+    }
 
-   protected void blockCondition() {
-      HashMap blockfilters = this.parameters.getBlockFilters();
-      if (!blockfilters.isEmpty()) {
-         String[] blockArr = new String[blockfilters.size()];
-         int i = 0;
+    /**
+	 * 
+	 */
+    protected void coordinateCondition() {
+        // Specific coords
+        final ArrayList<Location> locations = parameters.getSpecificBlockLocations();
+        if( locations.size() > 0 ) {
+            String coordCond = "(";
+            int l = 0;
+            for ( final Location loc : locations ) {
+                coordCond += ( l > 0 ? " OR" : "" ) + " (" + tableNameData + ".x = " + loc.getBlockX() + " AND "
+                        + tableNameData + ".y = " + loc.getBlockY() + " AND " + tableNameData + ".z = "
+                        + loc.getBlockZ() + ")";
+                l++;
+            }
+            coordCond += ")";
+            addCondition( coordCond );
+        }
+    }
 
-         for(Iterator blockFiltersIter = blockfilters.entrySet().iterator(); blockFiltersIter.hasNext(); ++i) {
-            Map.Entry entry = (Map.Entry)blockFiltersIter.next();
-            if ((Short)entry.getValue() == 0) {
-               blockArr[i] = this.tableNameData + ".block_id = " + entry.getKey();
+    /**
+     * 
+     * @return
+     */
+    protected String buildWhereConditions() {
+
+        // Parent process
+        // if(parameters.getParentId() > 0){
+        // addCondition( String.format("ex.data = %d", parameters.getParentId())
+        // );
+        // }
+
+        // Build final condition string
+        int condCount = 1;
+        String query = "";
+        if( conditions.size() > 0 ) {
+            for ( final String cond : conditions ) {
+                if( condCount == 1 ) {
+                    query += " WHERE ";
+                } else {
+                    query += " AND ";
+                }
+                query += cond;
+                condCount++;
+            }
+        }
+
+        return query;
+
+    }
+
+    /**
+     * 
+     * @return
+     */
+    @Override
+    protected String group() {
+        if( shouldGroup ) { return " GROUP BY " + tableNameData + ".action_id, " + tableNameData + ".player_id, "
+                + tableNameData + ".block_id, ex.data, DATE(FROM_UNIXTIME(" + tableNameData + ".epoch))"; }
+        return "";
+    }
+
+    /**
+     * 
+     * @return
+     */
+    @Override
+    protected String order() {
+        final String sort_dir = parameters.getSortDirection();
+        return " ORDER BY " + tableNameData + ".epoch " + sort_dir + ", x ASC, z ASC, y ASC, id " + sort_dir;
+    }
+
+    /**
+     * 
+     * @return
+     */
+    @Override
+    protected String limit() {
+        if( parameters.getProcessType().equals( PrismProcessType.LOOKUP ) ) {
+            final int limit = parameters.getLimit();
+            if( limit > 0 ) { return " LIMIT " + limit; }
+        }
+        return "";
+    }
+
+    /**
+     * 
+     * @param origValues
+     * @param field_name
+     * @return
+     */
+    protected String buildMultipleConditions(HashMap<String, MatchRule> origValues, String field_name, String format) {
+        String query = "";
+        if( !origValues.isEmpty() ) {
+
+            final ArrayList<String> whereIs = new ArrayList<String>();
+            final ArrayList<String> whereNot = new ArrayList<String>();
+            final ArrayList<String> whereIsLike = new ArrayList<String>();
+            for ( final Entry<String, MatchRule> entry : origValues.entrySet() ) {
+                if( entry.getValue().equals( MatchRule.EXCLUDE ) ) {
+                    whereNot.add( entry.getKey() );
+                } else if( entry.getValue().equals( MatchRule.PARTIAL ) ) {
+                    whereIsLike.add( entry.getKey() );
+                } else {
+                    whereIs.add( entry.getKey() );
+                }
+            }
+            // To match
+            if( !whereIs.isEmpty() ) {
+                String[] whereValues = new String[whereIs.size()];
+                whereValues = whereIs.toArray( whereValues );
+                if( format == null ) {
+                    query += buildGroupConditions( field_name, whereValues, "%s = '%s'", "OR", null );
+                } else {
+                    query += buildGroupConditions( field_name, whereValues, "%s LIKE '%%%s%%'", "OR", format );
+                }
+            }
+            // To match partial
+            if( !whereIsLike.isEmpty() ) {
+                String[] whereValues = new String[whereIsLike.size()];
+                whereValues = whereIsLike.toArray( whereValues );
+                query += buildGroupConditions( field_name, whereValues, "%s LIKE '%%%s%%'", "OR", format );
+            }
+            // Not match
+            if( !whereNot.isEmpty() ) {
+                String[] whereNotValues = new String[whereNot.size()];
+                whereNotValues = whereNot.toArray( whereNotValues );
+
+                if( format == null ) {
+                    query += buildGroupConditions( field_name, whereNotValues, "%s != '%s'", null, null );
+                } else {
+                    query += buildGroupConditions( field_name, whereNotValues, "%s NOT LIKE '%%%s%%'", null, format );
+                }
+            }
+        }
+        return query;
+    }
+
+    /**
+     * 
+     * @param fieldname
+     * @param arg_values
+     * @return
+     */
+    protected String buildGroupConditions(String fieldname, String[] arg_values, String matchFormat, String matchType,
+            String dataFormat) {
+
+        String where = "";
+        matchFormat = ( matchFormat == null ? "%s = %s" : matchFormat );
+        matchType = ( matchType == null ? "AND" : matchType );
+        dataFormat = ( dataFormat == null ? "%s" : dataFormat );
+
+        if( arg_values.length > 0 && !matchFormat.isEmpty() ) {
+            where += "(";
+            int c = 1;
+            for ( final String val : arg_values ) {
+                if( c > 1 && c <= arg_values.length ) {
+                    where += " " + matchType + " ";
+                }
+                fieldname = ( fieldname == null ? "" : fieldname );
+                where += String.format( matchFormat, fieldname, String.format( dataFormat, val ) );
+                c++;
+            }
+            where += ")";
+        }
+        return where;
+    }
+
+    /**
+     * 
+     * @param minLoc
+     * @param maxLoc
+     * @return
+     */
+    protected void buildRadiusCondition(Vector minLoc, Vector maxLoc) {
+        if( minLoc != null && maxLoc != null ) {
+            addCondition( "(" + tableNameData + ".x BETWEEN " + minLoc.getBlockX() + " AND " + maxLoc.getBlockX() + ")" );
+            addCondition( "(" + tableNameData + ".y BETWEEN " + minLoc.getBlockY() + " AND " + maxLoc.getBlockY() + ")" );
+            addCondition( "(" + tableNameData + ".z BETWEEN " + minLoc.getBlockZ() + " AND " + maxLoc.getBlockZ() + ")" );
+        }
+    }
+
+    /**
+     * 
+     * @return
+     */
+    protected String buildTimeCondition(Long dateFrom, String equation) {
+        final String where = "";
+        if( dateFrom != null ) {
+            if( equation == null ) {
+                addCondition( tableNameData + ".epoch >= " + ( dateFrom / 1000 ) + "" );
             } else {
-               blockArr[i] = this.tableNameData + ".block_id = " + entry.getKey() + " AND " + this.tableNameData + ".block_subid = " + entry.getValue();
+                addCondition( tableNameData + ".epoch " + equation + " '" + ( dateFrom / 1000 ) + "'" );
             }
-         }
-         this.addCondition(this.buildGroupConditions(null, blockArr, "%s%s", "OR", null));
-      }
-   }
-
-   protected void entityCondition() {
-      HashMap entityNames = this.parameters.getEntities();
-      if (entityNames.size() > 0) {
-         this.addCondition(this.buildMultipleConditions(entityNames, "ex.data", "entity_name\":\"%s"));
-      }
-   }
-
-   protected void timeCondition() {
-      Long time = this.parameters.getBeforeTime();
-      if (time != null && time != 0L) {
-         this.addCondition(this.buildTimeCondition(time, "<="));
-      }
-
-      time = this.parameters.getSinceTime();
-      if (time != null && time != 0L) {
-         this.addCondition(this.buildTimeCondition(time, null));
-      }
-   }
-
-   protected void keywordCondition() {
-      String keyword = this.parameters.getKeyword();
-      if (keyword != null) {
-         this.addCondition("ex.data LIKE '%" + keyword.replace("'", "''") + "%'");
-      }
-   }
-
-   protected void coordinateCondition() {
-      ArrayList locations = this.parameters.getSpecificBlockLocations();
-      if (locations.size() > 0) {
-         String coordCond = "(";
-         int l = 0;
-
-         for(Iterator locationsIter = locations.iterator(); locationsIter.hasNext(); ++l) {
-            Location loc = (Location)locationsIter.next();
-            coordCond = coordCond + (l > 0 ? " OR" : "") + " (" + this.tableNameData + ".x = " + loc.getBlockX() + " AND " + this.tableNameData + ".y = " + loc.getBlockY() + " AND " + this.tableNameData + ".z = " + loc.getBlockZ() + ")";
-         }
-         coordCond = coordCond + ")";
-         this.addCondition(coordCond);
-      }
-   }
-
-   protected String buildWhereConditions() {
-      int condCount = 1;
-      String query = "";
-      if (this.conditions.size() > 0) {
-         for(Iterator conditionsIter = this.conditions.iterator(); conditionsIter.hasNext(); ++condCount) {
-            String cond = (String)conditionsIter.next();
-            if (condCount == 1) {
-               query = query + " WHERE ";
-            } else {
-               query = query + " AND ";
-            }
-            query = query + cond;
-         }
-      }
-      return query;
-   }
-
-   protected String group() {
-      return this.shouldGroup ? " GROUP BY " + this.tableNameData + ".action_id, " + this.tableNameData + ".player_id, " + this.tableNameData + ".block_id, ex.data, DATE(FROM_UNIXTIME(" + this.tableNameData + ".epoch))" : "";
-   }
-
-   protected String order() {
-      String sort_dir = this.parameters.getSortDirection();
-      return " ORDER BY " + this.tableNameData + ".epoch " + sort_dir + ", x ASC, z ASC, y ASC, id " + sort_dir;
-   }
-
-   protected String limit() {
-      if (this.parameters.getProcessType().equals(PrismProcessType.LOOKUP)) {
-         int limit = this.parameters.getLimit();
-         if (limit > 0) {
-            return " LIMIT " + limit;
-         }
-      }
-      return "";
-   }
-
-   protected String buildMultipleConditions(HashMap origValues, String field_name, String format) {
-      String query = "";
-      if (!origValues.isEmpty()) {
-         ArrayList whereIs = new ArrayList();
-         ArrayList whereNot = new ArrayList();
-         ArrayList whereIsLike = new ArrayList();
-         Iterator origValuesIter = origValues.entrySet().iterator();
-
-         while(origValuesIter.hasNext()) {
-            Map.Entry entry = (Map.Entry)origValuesIter.next();
-            if (((MatchRule)entry.getValue()).equals(MatchRule.EXCLUDE)) {
-               whereNot.add(entry.getKey());
-            } else if (((MatchRule)entry.getValue()).equals(MatchRule.PARTIAL)) {
-               whereIsLike.add(entry.getKey());
-            } else {
-               whereIs.add(entry.getKey());
-            }
-         }
-
-         String[] whereValuesArray;
-         if (!whereIs.isEmpty()) {
-            whereValuesArray = (String[])whereIs.toArray(new String[0]);
-            if (format == null) {
-               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s = '%s'", "OR", null);
-            } else {
-               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s LIKE '%%%s%%'", "OR", format);
-            }
-         }
-
-         if (!whereIsLike.isEmpty()) {
-            if(!query.isEmpty() && query.charAt(query.length()-1) != '(' && !query.trim().endsWith("OR")) query += " OR ";
-            whereValuesArray = (String[])whereIsLike.toArray(new String[0]);
-            query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s LIKE '%%%s%%'", "OR", format);
-         }
-
-         if (!whereNot.isEmpty()) {
-            if(!query.isEmpty() && query.charAt(query.length()-1) != '(' && !query.trim().endsWith("AND")) query += " AND ";
-            whereValuesArray = (String[])whereNot.toArray(new String[0]);
-            if (format == null) {
-               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s != '%s'", "AND", null);
-            } else {
-               query = query + this.buildGroupConditions(field_name, whereValuesArray, "%s NOT LIKE '%%%s%%'", "AND", format);
-            }
-         }
-      }
-      return query;
-   }
-
-   protected String buildGroupConditions(String fieldname, String[] arg_values, String matchFormat, String matchType, String dataFormat) {
-      String where = "";
-      matchFormat = matchFormat == null ? "%s = %s" : matchFormat;
-      matchType = matchType == null ? "AND" : matchType;
-      dataFormat = dataFormat == null ? "%s" : dataFormat;
-      if (arg_values.length > 0 && !matchFormat.isEmpty()) {
-         where = where + "(";
-         int c = 1;
-         for(String val : arg_values) {
-            if (c > 1) {
-               where = where + " " + matchType + " ";
-            }
-            String currentFieldname = fieldname == null ? "" : fieldname;
-            String sanitizedVal = (val != null) ? val.replace("'", "''") : "";
-            where = where + String.format(matchFormat, currentFieldname, String.format(dataFormat, sanitizedVal));
-            ++c;
-         }
-         where = where + ")";
-      }
-      return where;
-   }
-
-   protected void buildRadiusCondition(Vector minLoc, Vector maxLoc) {
-      if (minLoc != null && maxLoc != null) {
-         this.addCondition("(" + this.tableNameData + ".x BETWEEN " + minLoc.getBlockX() + " AND " + maxLoc.getBlockX() + ")");
-         this.addCondition("(" + this.tableNameData + ".y BETWEEN " + minLoc.getBlockY() + " AND " + maxLoc.getBlockY() + ")");
-         this.addCondition("(" + this.tableNameData + ".z BETWEEN " + minLoc.getBlockZ() + " AND " + maxLoc.getBlockZ() + ")");
-      }
-   }
-
-   protected String buildTimeCondition(Long dateFrom, String equation) {
-      if (dateFrom != null) {
-         if (equation == null) {
-            this.addCondition(this.tableNameData + ".epoch >= " + dateFrom / 1000L);
-         } else {
-            this.addCondition(this.tableNameData + ".epoch " + equation + " " + dateFrom / 1000L);
-         }
-      }
-      return "";
-   }
+        }
+        return where;
+    }
 }

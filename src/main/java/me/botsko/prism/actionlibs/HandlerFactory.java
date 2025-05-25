@@ -2,14 +2,28 @@ package me.botsko.prism.actionlibs;
 
 import me.botsko.prism.actions.Handler;
 
-public class HandlerFactory {
-   final Class handlerClass;
+public class HandlerFactory<H> {
 
-   public HandlerFactory(Class handlerClass) {
-      this.handlerClass = handlerClass;
-   }
+    /**
+	 * 
+	 */
+    final Class<? extends Handler> handlerClass;
 
-   public Handler create() throws InstantiationException, IllegalAccessException {
-      return (Handler)this.handlerClass.newInstance();
-   }
+    /**
+     * 
+     * @param handlerClass
+     */
+    public HandlerFactory(Class<? extends Handler> handlerClass) {
+        this.handlerClass = handlerClass;
+    }
+
+    /**
+     * 
+     * @return
+     * @throws InstantiationException
+     * @throws IllegalAccessException
+     */
+    public Handler create() throws InstantiationException, IllegalAccessException {
+        return handlerClass.newInstance();
+    }
 }

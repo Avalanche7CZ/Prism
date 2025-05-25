@@ -21,6 +21,7 @@ dependencies {
     compileOnly files('libs/spigot-1.7.10-SNAPSHOT-b1657.jar')
     compileOnly files('libs/forge-1.7.10-10.13.4.1614-1.7.10-universal.jar')
     compileOnly files('libs/worldedit-bukkit-6.1.jar')
+    compileOnly files('libs/HeroChat.jar')
 }
 
 def targetJavaVersion = 8

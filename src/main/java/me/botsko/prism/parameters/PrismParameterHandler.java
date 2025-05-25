@@ -1,22 +1,33 @@
 package me.botsko.prism.parameters;
 
-import java.util.List;
 import me.botsko.prism.actionlibs.QueryParameters;
 import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permissible;
 
+import java.util.List;
+
 public interface PrismParameterHandler {
-   String getName();
 
-   String[] getHelp();
+    public String getName();
 
-   boolean applicable(String var1, CommandSender var2);
+    public String[] getHelp();
 
-   void process(QueryParameters var1, String var2, CommandSender var3);
+    public boolean applicable(String parameter, CommandSender sender);
 
-   void defaultTo(QueryParameters var1, CommandSender var2);
+    public void process(QueryParameters query, String parameter, CommandSender sender);
 
-   List tabComplete(String var1, CommandSender var2);
+    public void defaultTo(QueryParameters query, CommandSender sender);
 
-   boolean hasPermission(String var1, Permissible var2);
+    /**
+     * Complete a param after the `:`
+     * 
+     * @param partialParameter
+     *            The partial parameter
+     * @param sender
+     *            The sender
+     * @return List of strings with suggestions or null if not applicable
+     */
+    public List<String> tabComplete(String partialParameter, CommandSender sender);
+
+    public boolean hasPermission( String parameter, Permissible permissible );
 }

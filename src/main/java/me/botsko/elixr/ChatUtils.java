@@ -1,5 +1,6 @@
-package com.helion3.prism.libs.elixr;
+package me.botsko.elixr;
 
+import java.util.Collection; // Import Collection
 import java.util.Iterator;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -7,7 +8,7 @@ import org.bukkit.entity.Player;
 
 public class ChatUtils {
    public static void notifyNearby(Location loc, int radius, String msg) {
-      Iterator var3 = Bukkit.getServer().getOnlinePlayers().iterator();
+      Iterator<Player> var3 = ((Collection<Player>) Bukkit.getServer().getOnlinePlayers()).iterator();
 
       while(var3.hasNext()) {
          Player p = (Player)var3.next();

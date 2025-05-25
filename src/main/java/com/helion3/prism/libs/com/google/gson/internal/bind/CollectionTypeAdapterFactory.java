@@ -22,6 +22,7 @@ public final class CollectionTypeAdapterFactory implements TypeAdapterFactory {
       this.constructorConstructor = constructorConstructor;
    }
 
+   @Override
    public TypeAdapter create(Gson gson, TypeToken typeToken) {
       Type type = typeToken.getType();
       Class rawType = typeToken.getRawType();
@@ -45,7 +46,8 @@ public final class CollectionTypeAdapterFactory implements TypeAdapterFactory {
          this.constructor = constructor;
       }
 
-      public Collection read(JsonReader in) throws IOException {
+      @Override
+      public Object read(JsonReader in) throws IOException { // Changed to Object
          if (in.peek() == JsonToken.NULL) {
             in.nextNull();
             return null;
@@ -63,7 +65,9 @@ public final class CollectionTypeAdapterFactory implements TypeAdapterFactory {
          }
       }
 
-      public void write(JsonWriter out, Collection collection) throws IOException {
+      @Override
+      public void write(JsonWriter out, Object collectionObj) throws IOException { // Changed to Object
+         Collection collection = (Collection) collectionObj; // Cast back to Collection
          if (collection == null) {
             out.nullValue();
          } else {

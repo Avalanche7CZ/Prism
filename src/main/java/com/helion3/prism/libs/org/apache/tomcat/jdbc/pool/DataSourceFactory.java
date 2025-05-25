@@ -68,6 +68,7 @@ public class DataSourceFactory implements ObjectFactory {
    public static final String OBJECT_NAME = "object_name";
    protected static final String[] ALL_PROPERTIES = new String[]{"defaultAutoCommit", "defaultReadOnly", "defaultTransactionIsolation", "defaultCatalog", "driverClassName", "maxActive", "maxIdle", "minIdle", "initialSize", "maxWait", "testOnBorrow", "testOnReturn", "timeBetweenEvictionRunsMillis", "numTestsPerEvictionRun", "minEvictableIdleTimeMillis", "testWhileIdle", "testOnConnect", "password", "url", "username", "validationQuery", "validationQueryTimeout", "validatorClassName", "validationInterval", "accessToUnderlyingConnectionAllowed", "removeAbandoned", "removeAbandonedTimeout", "logAbandoned", "poolPreparedStatements", "maxOpenPreparedStatements", "connectionProperties", "initSQL", "jdbcInterceptors", "jmxEnabled", "fairQueue", "useEquals", "object_name", "abandonWhenPercentageFull", "maxAge", "useLock", "dataSource", "dataSourceJNDI", "suspectTimeout", "alternateUsernameAllowed", "commitOnReturn", "rollbackOnReturn", "useDisposableConnectionFacade", "logValidationErrors", "propagateInterruptState", "ignoreExceptionOnPreLoad"};
 
+   @Override
    public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable environment) throws Exception {
       if (obj != null && obj instanceof Reference) {
          Reference ref = (Reference)obj;
@@ -123,8 +124,7 @@ public class DataSourceFactory implements ObjectFactory {
 
       value = properties.getProperty("defaultTransactionIsolation");
       if (value != null) {
-         int level = true;
-         int level;
+         int level; // Declare once
          if ("NONE".equalsIgnoreCase(value)) {
             level = 0;
          } else if ("READ_COMMITTED".equalsIgnoreCase(value)) {
@@ -428,8 +428,8 @@ public class DataSourceFactory implements ObjectFactory {
 
       if (jndiDS == null) {
          try {
-            Context context = new InitialContext();
-            jndiDS = context.lookup(poolProperties.getDataSourceJNDI());
+            Context initialContext = new InitialContext(); // Renamed variable
+            jndiDS = initialContext.lookup(poolProperties.getDataSourceJNDI());
          } catch (NamingException var5) {
             log.warn("The name \"" + poolProperties.getDataSourceJNDI() + "\" can not be found in the InitialContext.");
          }

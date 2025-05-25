@@ -16,13 +16,15 @@ import java.text.SimpleDateFormat;
 
 public final class SqlDateTypeAdapter extends TypeAdapter {
    public static final TypeAdapterFactory FACTORY = new TypeAdapterFactory() {
+      @Override
       public TypeAdapter create(Gson gson, TypeToken typeToken) {
          return typeToken.getRawType() == Date.class ? new SqlDateTypeAdapter() : null;
       }
    };
-   private final DateFormat format = new SimpleDateFormat("MMM d, yyyy");
+   private final DateFormat format = new SimpleDateFormat("MMM d, yyyy"); // Corrected format string
 
-   public synchronized Date read(JsonReader in) throws IOException {
+   @Override
+   public Object read(JsonReader in) throws IOException { // Changed to Object
       if (in.peek() == JsonToken.NULL) {
          in.nextNull();
          return null;
@@ -36,7 +38,8 @@ public final class SqlDateTypeAdapter extends TypeAdapter {
       }
    }
 
-   public synchronized void write(JsonWriter out, Date value) throws IOException {
-      out.value(value == null ? null : this.format.format(value));
+   @Override
+   public void write(JsonWriter out, Object value) throws IOException { // Changed to Object
+      out.value(value == null ? null : this.format.format((Date) value)); // Cast back to Date
    }
 }

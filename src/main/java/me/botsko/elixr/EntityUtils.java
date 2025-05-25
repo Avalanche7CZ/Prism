@@ -1,134 +1,49 @@
-package com.helion3.prism.libs.elixr;
+package me.botsko.elixr;
 
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.material.Bed;
+import org.bukkit.entity.ExperienceOrb;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 
-public class BlockUtils {
+public class EntityUtils {
    // $FF: synthetic field
    private static int[] $SWITCH_TABLE$org$bukkit$Material;
 
-   public static boolean isAcceptableForBlockPlace(Material m) {
+   public static int removeNearbyItemDrops(Player player, int radius) {
+      int removed = 0;
+      List nearby = player.getNearbyEntities((double)radius, (double)radius, (double)radius);
+      Iterator var4 = nearby.iterator();
+
+      while(true) {
+         Entity e;
+         do {
+            if (!var4.hasNext()) {
+               return removed;
+            }
+
+            e = (Entity)var4.next();
+         } while(!(e instanceof Item) && !(e instanceof ExperienceOrb));
+
+         e.remove();
+         ++removed;
+      }
+   }
+
+   public static boolean inCube(Location loc1, int radius, Location loc2) {
+      if (loc1 != null && loc2 != null) {
+         return loc1.getBlockX() + radius > loc2.getBlockX() && loc1.getBlockX() - radius < loc2.getBlockX() && loc1.getBlockY() + radius > loc2.getBlockY() && loc1.getBlockY() - radius < loc2.getBlockY() && loc1.getBlockZ() + radius > loc2.getBlockZ() && loc1.getBlockZ() - radius < loc2.getBlockZ();
+      } else {
+         return false;
+      }
+   }
+
+   public static boolean playerMayPassThrough(Material m) {
       switch (m) {
          case AIR:
-         case WATER:
-         case STATIONARY_WATER:
-         case LAVA:
-         case STATIONARY_LAVA:
-         case SAND:
-         case GRAVEL:
-         case LONG_GRASS:
-         case FIRE:
-         case SNOW:
-         case SNOW_BLOCK:
-            return true;
-         default:
-            return false;
-      }
-   }
-
-   public static ArrayList findFallingBlocksAboveBlock(Block block) {
-      ArrayList falling_blocks = new ArrayList();
-      Block above = block.getRelative(BlockFace.UP);
-      if (isFallingBlock(above)) {
-         falling_blocks.add(above);
-         ArrayList fallingBlocksAbove = findFallingBlocksAboveBlock(above);
-         if (fallingBlocksAbove.size() > 0) {
-            Iterator var4 = fallingBlocksAbove.iterator();
-
-            while(var4.hasNext()) {
-               Block _temp = (Block)var4.next();
-               falling_blocks.add(_temp);
-            }
-         }
-      }
-
-      return falling_blocks;
-   }
-
-   public static boolean isFallingBlock(Block block) {
-      Material m = block.getType();
-      return m.equals(Material.SAND) || m.equals(Material.GRAVEL) || m.equals(Material.ANVIL);
-   }
-
-   public static ArrayList findSideFaceAttachedBlocks(Block block) {
-      ArrayList detaching_blocks = new ArrayList();
-      Block blockToCheck = block.getRelative(BlockFace.EAST);
-      if (isSideFaceDetachableMaterial(blockToCheck.getType())) {
-         detaching_blocks.add(blockToCheck);
-      }
-
-      blockToCheck = block.getRelative(BlockFace.WEST);
-      if (isSideFaceDetachableMaterial(blockToCheck.getType())) {
-         detaching_blocks.add(blockToCheck);
-      }
-
-      blockToCheck = block.getRelative(BlockFace.NORTH);
-      if (isSideFaceDetachableMaterial(blockToCheck.getType())) {
-         detaching_blocks.add(blockToCheck);
-      }
-
-      blockToCheck = block.getRelative(BlockFace.SOUTH);
-      if (isSideFaceDetachableMaterial(blockToCheck.getType())) {
-         detaching_blocks.add(blockToCheck);
-      }
-
-      return detaching_blocks;
-   }
-
-   public static Block findFirstSurroundingBlockOfType(Block source, Material surrounding) {
-      Block blockToCheck = source.getRelative(BlockFace.EAST);
-      if (blockToCheck.getType().equals(surrounding)) {
-         return blockToCheck;
-      } else {
-         blockToCheck = source.getRelative(BlockFace.WEST);
-         if (blockToCheck.getType().equals(surrounding)) {
-            return blockToCheck;
-         } else {
-            blockToCheck = source.getRelative(BlockFace.NORTH);
-            if (blockToCheck.getType().equals(surrounding)) {
-               return blockToCheck;
-            } else {
-               blockToCheck = source.getRelative(BlockFace.SOUTH);
-               return blockToCheck.getType().equals(surrounding) ? blockToCheck : null;
-            }
-         }
-      }
-   }
-
-   public static boolean isSideFaceDetachableMaterial(Material m) {
-      return m.equals(Material.WALL_SIGN) || m.equals(Material.TORCH) || m.equals(Material.LEVER) || m.equals(Material.WOOD_BUTTON) || m.equals(Material.STONE_BUTTON) || m.equals(Material.LADDER) || m.equals(Material.VINE) || m.equals(Material.COCOA) || m.equals(Material.PORTAL) || m.equals(Material.PISTON_EXTENSION) || m.equals(Material.PISTON_MOVING_PIECE) || m.equals(Material.PISTON_BASE) || m.equals(Material.PISTON_STICKY_BASE) || m.equals(Material.REDSTONE_TORCH_OFF) || m.equals(Material.REDSTONE_TORCH_ON) || m.equals(Material.TRIPWIRE_HOOK) || m.equals(Material.TRAP_DOOR);
-   }
-
-   public static ArrayList findTopFaceAttachedBlocks(Block block) {
-      ArrayList detaching_blocks = new ArrayList();
-      Block blockToCheck = block.getRelative(BlockFace.UP);
-      if (isTopFaceDetachableMaterial(blockToCheck.getType())) {
-         detaching_blocks.add(blockToCheck);
-         if (blockToCheck.getType().equals(Material.CACTUS) || blockToCheck.getType().equals(Material.SUGAR_CANE_BLOCK)) {
-            ArrayList additionalBlocks = findTopFaceAttachedBlocks(blockToCheck);
-            if (!additionalBlocks.isEmpty()) {
-               Iterator var4 = additionalBlocks.iterator();
-
-               while(var4.hasNext()) {
-                  Block _temp = (Block)var4.next();
-                  detaching_blocks.add(_temp);
-               }
-            }
-         }
-      }
-
-      return detaching_blocks;
-   }
-
-   public static boolean isTopFaceDetachableMaterial(Material m) {
-      switch (m) {
          case SAPLING:
          case POWERED_RAIL:
          case DETECTOR_RAIL:
@@ -136,7 +51,6 @@ public class BlockUtils {
          case DEAD_BUSH:
          case YELLOW_FLOWER:
          case RED_ROSE:
-         case BROWN_MUSHROOM:
          case RED_MUSHROOM:
          case TORCH:
          case REDSTONE_WIRE:
@@ -146,14 +60,11 @@ public class BlockUtils {
          case RAILS:
          case LEVER:
          case STONE_PLATE:
-         case IRON_DOOR_BLOCK:
          case WOOD_PLATE:
          case REDSTONE_TORCH_OFF:
          case REDSTONE_TORCH_ON:
          case SNOW:
-         case CACTUS:
          case SUGAR_CANE_BLOCK:
-         case PORTAL:
          case DIODE_BLOCK_OFF:
          case DIODE_BLOCK_ON:
          case PUMPKIN_STEM:
@@ -165,321 +76,13 @@ public class BlockUtils {
          case CARROT:
          case POTATO:
          case SKULL:
-         case GOLD_PLATE:
-         case IRON_PLATE:
-         case REDSTONE_COMPARATOR_OFF:
-         case REDSTONE_COMPARATOR_ON:
-         case ACTIVATOR_RAIL:
-         case DOUBLE_PLANT:
          case WHEAT:
          case SIGN:
-         case WOOD_DOOR:
-         case IRON_DOOR:
          case REDSTONE:
          case DIODE:
             return true;
          default:
             return false;
-      }
-   }
-
-   public static boolean materialMeansBlockDetachment(Material m) {
-      switch (m) {
-         case AIR:
-         case WATER:
-         case STATIONARY_WATER:
-         case LAVA:
-         case STATIONARY_LAVA:
-         case FIRE:
-            return true;
-         default:
-            return false;
-      }
-   }
-
-   public static ArrayList findHangingEntities(Block block) {
-      ArrayList entities = new ArrayList();
-      Entity[] foundEntities = block.getChunk().getEntities();
-      if (foundEntities.length > 0) {
-         Entity[] var3 = foundEntities;
-         int var4 = foundEntities.length;
-
-         for(int var5 = 0; var5 < var4; ++var5) {
-            Entity e = var3[var5];
-            if (block.getWorld().equals(e.getWorld()) && block.getLocation().distance(e.getLocation()) < 2.0 && isHangingEntity(e)) {
-               entities.add(e);
-            }
-         }
-      }
-
-      return entities;
-   }
-
-   public static boolean isHangingEntity(Entity entity) {
-      EntityType e = entity.getType();
-      return e.equals(EntityType.ITEM_FRAME) || e.equals(EntityType.PAINTING);
-   }
-
-   public static Block getSiblingForDoubleLengthBlock(Block block) {
-      if (!block.getType().equals(Material.WOODEN_DOOR) && !block.getType().equals(Material.IRON_DOOR_BLOCK) || block.getData() != 8 && block.getData() != 9) {
-         if (block.getType().equals(Material.BED_BLOCK)) {
-            Bed b = (Bed)block.getState().getData();
-            if (b.isHeadOfBed()) {
-               return block.getRelative(b.getFacing().getOppositeFace());
-            }
-         }
-
-         return !block.getType().equals(Material.CHEST) && !block.getType().equals(Material.TRAPPED_CHEST) ? null : findFirstSurroundingBlockOfType(block, block.getType());
-      } else {
-         return block.getRelative(BlockFace.DOWN);
-      }
-   }
-
-   public static void properlySetDoor(Block originalBlock, int typeid, byte subid) {
-      Block aboveOrBelow;
-      if (subid != 8 && subid != 9) {
-         aboveOrBelow = originalBlock.getRelative(BlockFace.UP);
-         aboveOrBelow.setTypeId(typeid);
-         Block left = null;
-         switch (subid) {
-            case 0:
-               left = originalBlock.getRelative(BlockFace.NORTH);
-               break;
-            case 1:
-               left = originalBlock.getRelative(BlockFace.EAST);
-               break;
-            case 2:
-               left = originalBlock.getRelative(BlockFace.SOUTH);
-               break;
-            case 3:
-               left = originalBlock.getRelative(BlockFace.WEST);
-         }
-
-         if (aboveOrBelow != null) {
-            if (left != null && isDoor(left.getType())) {
-               aboveOrBelow.setData((byte)9);
-            } else {
-               aboveOrBelow.setData((byte)8);
-            }
-         }
-      } else {
-         aboveOrBelow = originalBlock.getRelative(BlockFace.DOWN);
-         aboveOrBelow.setTypeId(typeid);
-         aboveOrBelow.setData((byte)0);
-      }
-
-   }
-
-   public static boolean isDoor(Material m) {
-      switch (m) {
-         case WOODEN_DOOR:
-         case IRON_DOOR_BLOCK:
-         case WOOD_DOOR:
-         case IRON_DOOR:
-            return true;
-         default:
-            return false;
-      }
-   }
-
-   public static void properlySetBed(Block originalBlock, int typeid, byte subid) {
-      Block top = null;
-      int new_subid = 0;
-      switch (subid) {
-         case 0:
-            top = originalBlock.getRelative(BlockFace.SOUTH);
-            new_subid = 8;
-            break;
-         case 1:
-            top = originalBlock.getRelative(BlockFace.WEST);
-            new_subid = 9;
-            break;
-         case 2:
-            top = originalBlock.getRelative(BlockFace.NORTH);
-            new_subid = 10;
-            break;
-         case 3:
-            top = originalBlock.getRelative(BlockFace.EAST);
-            new_subid = 11;
-      }
-
-      if (top != null) {
-         top.setTypeId(typeid);
-         top.setData((byte)new_subid);
-      } else {
-         System.out.println("Error setting bed: block top location was illegal. Data value: " + subid + " New data value: " + new_subid);
-      }
-
-   }
-
-   public static void properlySetDoublePlant(Block originalBlock, int typeid, byte subid) {
-      if (originalBlock.getType().equals(Material.DOUBLE_PLANT)) {
-         Block above = originalBlock.getRelative(BlockFace.UP);
-         if (isAcceptableForBlockPlace(above.getType())) {
-            if (typeid == 175 && subid < 8) {
-               subid = 8;
-            }
-
-            above.setTypeId(typeid);
-            above.setData(subid);
-         }
-      }
-   }
-
-   public static boolean canFlowBreakMaterial(Material m) {
-      switch (m) {
-         case SAPLING:
-         case POWERED_RAIL:
-         case DETECTOR_RAIL:
-         case LONG_GRASS:
-         case DEAD_BUSH:
-         case YELLOW_FLOWER:
-         case RED_ROSE:
-         case BROWN_MUSHROOM:
-         case RED_MUSHROOM:
-         case TORCH:
-         case REDSTONE_WIRE:
-         case CROPS:
-         case SIGN_POST:
-         case WOODEN_DOOR:
-         case LADDER:
-         case RAILS:
-         case LEVER:
-         case STONE_PLATE:
-         case IRON_DOOR_BLOCK:
-         case WOOD_PLATE:
-         case REDSTONE_TORCH_OFF:
-         case REDSTONE_TORCH_ON:
-         case CACTUS:
-         case SUGAR_CANE_BLOCK:
-         case DIODE_BLOCK_OFF:
-         case DIODE_BLOCK_ON:
-         case PUMPKIN_STEM:
-         case MELON_STEM:
-         case VINE:
-         case WATER_LILY:
-         case NETHER_WARTS:
-         case COCOA:
-         case TRIPWIRE_HOOK:
-         case TRIPWIRE:
-         case FLOWER_POT:
-         case CARROT:
-         case POTATO:
-         case SKULL:
-         case REDSTONE_COMPARATOR_OFF:
-         case REDSTONE_COMPARATOR_ON:
-         case ACTIVATOR_RAIL:
-         case DOUBLE_PLANT:
-         case WHEAT:
-         case SIGN:
-         case WOOD_DOOR:
-         case IRON_DOOR:
-         case REDSTONE:
-         case DIODE:
-            return true;
-         default:
-            return false;
-      }
-   }
-
-   public static boolean materialRequiresSoil(Material m) {
-      switch (m) {
-         case CROPS:
-         case PUMPKIN_STEM:
-         case MELON_STEM:
-         case CARROT:
-         case POTATO:
-         case WHEAT:
-            return true;
-         default:
-            return false;
-      }
-   }
-
-   public static ArrayList findConnectedBlocksOfType(Material type, Block currBlock, ArrayList foundLocations) {
-      ArrayList foundBlocks = new ArrayList();
-      if (foundLocations == null) {
-         foundLocations = new ArrayList();
-      }
-
-      foundLocations.add(currBlock.getLocation());
-
-      for(int x = -1; x <= 1; ++x) {
-         for(int z = -1; z <= 1; ++z) {
-            for(int y = -1; y <= 1; ++y) {
-               Block newblock = currBlock.getRelative(x, y, z);
-               if (newblock.getType() == type && !foundLocations.contains(newblock.getLocation())) {
-                  foundBlocks.add(newblock);
-                  ArrayList additionalBlocks = findConnectedBlocksOfType(type, newblock, foundLocations);
-                  if (additionalBlocks.size() > 0) {
-                     foundBlocks.addAll(additionalBlocks);
-                  }
-               }
-            }
-         }
-      }
-
-      return foundBlocks;
-   }
-
-   public static Block getFirstBlockOfMaterialBelow(Material m, Location loc) {
-      for(int y = (int)loc.getY(); y > 0; --y) {
-         loc.setY((double)y);
-         if (loc.getBlock().getType().equals(m)) {
-            return loc.getBlock();
-         }
-      }
-
-      return null;
-   }
-
-   public static boolean isGrowableStructure(Material m) {
-      switch (m) {
-         case LOG:
-         case LEAVES:
-         case HUGE_MUSHROOM_1:
-         case HUGE_MUSHROOM_2:
-            return true;
-         default:
-            return false;
-      }
-   }
-
-   public static boolean areBlockIdsSameCoreItem(int id1, int id2) {
-      if (id1 == id2) {
-         return true;
-      } else if (id1 != 2 && id1 != 3 || id2 != 2 && id2 != 3) {
-         if (id1 != 110 && id1 != 3 || id2 != 110 && id2 != 3) {
-            if (id1 != 8 && id1 != 9 || id2 != 8 && id2 != 9) {
-               if (id1 != 10 && id1 != 11 || id2 != 10 && id2 != 11) {
-                  if (id1 != 75 && id1 != 76 || id2 != 75 && id2 != 76) {
-                     if (id1 != 93 && id1 != 94 || id2 != 93 && id2 != 94) {
-                        if (id1 != 123 && id1 != 124 || id2 != 123 && id2 != 124) {
-                           if (id1 != 61 && id1 != 62 || id2 != 61 && id2 != 62) {
-                              return (id1 == 149 || id1 == 150) && (id2 == 149 || id2 == 150);
-                           } else {
-                              return true;
-                           }
-                        } else {
-                           return true;
-                        }
-                     } else {
-                        return true;
-                     }
-                  } else {
-                     return true;
-                  }
-               } else {
-                  return true;
-               }
-            } else {
-               return true;
-            }
-         } else {
-            return true;
-         }
-      } else {
-         return true;
       }
    }
 

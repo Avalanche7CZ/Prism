@@ -6,31 +6,86 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 public interface Wand {
-   void playerLeftClick(Player var1, Location var2);
 
-   void playerRightClick(Player var1, Location var2);
+    /**
+	 * 
+	 */
+    public void playerLeftClick(Player player, Location loc);
 
-   void playerRightClick(Player var1, Entity var2);
+    /**
+	 * 
+	 */
+    public void playerRightClick(Player player, Location loc);
 
-   void setItemWasGiven(boolean var1);
+    /**
+     * 
+     * @param player
+     * @param entity
+     */
+    public void playerRightClick(Player player, Entity entity);
 
-   boolean itemWasGiven();
+    /**
+     * 
+     * @param given
+     */
+    public void setItemWasGiven(boolean given);
 
-   void setWandMode(String var1);
+    /**
+     * 
+     * @return
+     */
+    public boolean itemWasGiven();
 
-   String getWandMode();
+    /**
+     * 
+     * @param mode
+     */
+    public void setWandMode(String mode);
 
-   int getItemId();
+    /**
+     * 
+     * @param mode
+     */
+    public String getWandMode();
 
-   void setItemId(int var1);
+    /**
+     * @return the item_id
+     */
+    public int getItemId();
 
-   byte getItemSubId();
+    /**
+     * @param item_id
+     *            the item_id to set
+     */
+    public void setItemId(int item_id);
 
-   void setItemSubId(byte var1);
+    /**
+     * @return the item_subid
+     */
+    public byte getItemSubId();
 
-   void setItemFromKey(String var1);
+    /**
+     * @param item_subid
+     *            the item_subid to set
+     */
+    public void setItemSubId(byte item_subid);
 
-   void setOriginallyHeldItem(ItemStack var1);
+    /**
+     * 
+     * @param key
+     */
+    public void setItemFromKey(String key);
 
-   void disable(Player var1);
+    /**
+     * 
+     * @param item
+     */
+    public void setOriginallyHeldItem(ItemStack item);
+
+    /**
+     * 
+     * @param player
+     */
+    public void disable(Player player);
+
 }

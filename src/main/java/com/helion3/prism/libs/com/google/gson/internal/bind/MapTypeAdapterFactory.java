@@ -31,6 +31,7 @@ public final class MapTypeAdapterFactory implements TypeAdapterFactory {
       this.complexMapKeySerialization = complexMapKeySerialization;
    }
 
+   @Override
    public TypeAdapter create(Gson gson, TypeToken typeToken) {
       Type type = typeToken.getType();
       Class rawType = typeToken.getRawType();
@@ -62,7 +63,8 @@ public final class MapTypeAdapterFactory implements TypeAdapterFactory {
          this.constructor = constructor;
       }
 
-      public Map read(JsonReader in) throws IOException {
+      @Override
+      public Object read(JsonReader in) throws IOException { // Changed to Object
          JsonToken peek = in.peek();
          if (peek == JsonToken.NULL) {
             in.nextNull();
@@ -108,7 +110,9 @@ public final class MapTypeAdapterFactory implements TypeAdapterFactory {
          }
       }
 
-      public void write(JsonWriter out, Map map) throws IOException {
+      @Override
+      public void write(JsonWriter out, Object mapObj) throws IOException { // Changed to Object
+         Map map = (Map) mapObj; // Cast back to Map
          if (map == null) {
             out.nullValue();
          } else if (!MapTypeAdapterFactory.this.complexMapKeySerialization) {

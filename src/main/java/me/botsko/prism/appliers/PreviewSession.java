@@ -1,29 +1,54 @@
 package me.botsko.prism.appliers;
 
-import java.util.Date;
 import org.bukkit.entity.Player;
 
 public class PreviewSession {
-   protected final Player player;
-   protected final Previewable previewer;
-   protected final long queryTime;
 
-   public PreviewSession(Player player, Previewable previewer) {
-      this.player = player;
-      this.previewer = previewer;
-      Date date = new Date();
-      this.queryTime = date.getTime();
-   }
+    /**
+	 * 
+	 */
+    protected final Player player;
 
-   public Player getPlayer() {
-      return this.player;
-   }
+    /**
+	 * 
+	 */
+    protected final Previewable previewer;
 
-   public Previewable getPreviewer() {
-      return this.previewer;
-   }
+    /**
+	 * 
+	 */
+    protected final long queryTime;
 
-   public long getQueryTime() {
-      return this.queryTime;
-   }
+    /**
+     * 
+     * @param player
+     * @param previewer
+     */
+    public PreviewSession(Player player, Previewable previewer) {
+        this.player = player;
+        this.previewer = previewer;
+        final java.util.Date date = new java.util.Date();
+        this.queryTime = date.getTime();
+    }
+
+    /**
+     * @return the player
+     */
+    public Player getPlayer() {
+        return player;
+    }
+
+    /**
+     * @return the previewer
+     */
+    public Previewable getPreviewer() {
+        return previewer;
+    }
+
+    /**
+     * @return the queryTime
+     */
+    public long getQueryTime() {
+        return queryTime;
+    }
 }

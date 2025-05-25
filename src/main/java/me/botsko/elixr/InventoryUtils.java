@@ -1,4 +1,4 @@
-package com.helion3.prism.libs.elixr;
+package me.botsko.elixr;
 
 import java.util.HashMap;
 import java.util.Iterator;
