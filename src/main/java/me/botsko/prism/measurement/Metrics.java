@@ -404,7 +404,6 @@ public class Metrics {
         encodeDataPair( data, "online-mode", Boolean.toString( onlineMode ) );
         encodeDataPair( data, "java_version", java_version );
 
-        // If we're pinging, append it
         if( isPing ) {
             encodeDataPair( data, "ping", "true" );
         }

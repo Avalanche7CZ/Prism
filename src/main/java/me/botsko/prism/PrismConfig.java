@@ -11,45 +11,45 @@ import org.bukkit.plugin.Plugin;
 public class PrismConfig extends ConfigBase {
 
     /**
-     * 
-     * @param plugin
+     * * @param plugin
      */
     public PrismConfig(Plugin plugin) {
         super( plugin );
     }
 
     /**
-	 *
-	 */
+     *
+     */
     @Override
     public FileConfiguration getConfig() {
 
         config = plugin.getConfig();
 
-        // set defaults
         config.addDefault( "prism.debug", false );
-        // config.addDefault("prism.language", "en-us");
-
         config.addDefault( "prism.allow-metrics", true );
 
-        // Database
-        config.addDefault( "prism.database.max-pool-connections", 20 );
-        config.addDefault( "prism.database.pool-initial-size", 10 );
-        config.addDefault( "prism.database.max-idle-connections", 10 );
-        config.addDefault( "prism.database.max-wait", 30000 );
+        config.addDefault( "prism.database.type", "mysql" );
+        // For modern MySQL (8+): com.mysql.cj.jdbc.Driver
+        // For older MySQL (5.x) or MariaDB: com.mysql.jdbc.Driver or org.mariadb.jdbc.Driver
+        config.addDefault( "prism.database.driverClassName", "com.mysql.jdbc.Driver" ); // Or org.mariadb.jdbc.Driver if using MariaDB client
+        // JDBC URL Prefix (e.g., jdbc:mysql:// or jdbc:mariadb://)
+        config.addDefault( "prism.database.jdbcUrlPrefix", "jdbc:mysql://" ); // Or jdbc:mariadb://
+        // Common database settings
+        config.addDefault( "prism.database.hostname", "127.0.0.1" );
+        config.addDefault( "prism.database.port", "3306" );
+        config.addDefault( "prism.database.databaseName", "minecraft" );
+        config.addDefault( "prism.database.username", "root" );
+        config.addDefault( "prism.database.password", "" );
+        config.addDefault( "prism.database.tablePrefix", "prism_" );
+
+        // Connection Pool settings (remain generic)
+        config.addDefault( "prism.database.pool.max-connections", 20 );
+        config.addDefault( "prism.database.pool.initial-size", 10 );
+        config.addDefault( "prism.database.pool.max-idle-connections", 10 );
+        config.addDefault( "prism.database.pool.max-wait-ms", 30000 ); // max-wait in milliseconds
         config.addDefault( "prism.database.max-failures-before-wait", 5 );
         config.addDefault( "prism.database.actions-per-insert-batch", 1000 );
-
-        // queue
         config.addDefault( "prism.database.force-write-queue-on-shutdown", true );
-
-        // Mysql
-        config.addDefault( "prism.mysql.hostname", "127.0.0.1" );
-        config.addDefault( "prism.mysql.username", "root" );
-        config.addDefault( "prism.mysql.password", "" );
-        config.addDefault( "prism.mysql.database", "minecraft" );
-        config.addDefault( "prism.mysql.prefix", "prism_" );
-        config.addDefault( "prism.mysql.port", "3306" );
 
         // pste.me sharing.
         config.addDefault( "prism.paste.enable", false );
@@ -57,8 +57,7 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.paste.api-key", "API key from http://pste.me/#/account" );
 
         // Wands
-        config.addDefault( "prism.wands.default-mode", "hand" ); // hand, item,
-                                                                 // or block
+        config.addDefault( "prism.wands.default-mode", "hand" ); // hand, item, or block
         config.addDefault( "prism.wands.default-item-mode-id", "280:0" );
         config.addDefault( "prism.wands.default-block-mode-id", "17:1" );
         config.addDefault( "prism.wands.auto-equip", true );
@@ -123,13 +122,13 @@ public class PrismConfig extends ConfigBase {
 
         // Illegal Block Rollbacks
         final List<Integer> illegalBlocks = new ArrayList<Integer>();
-        illegalBlocks.add( 10 );
-        illegalBlocks.add( 11 );
-        illegalBlocks.add( 46 );
-        illegalBlocks.add( 51 );
+        illegalBlocks.add( 10 ); // Flowing Lava
+        illegalBlocks.add( 11 ); // Still Lava
+        illegalBlocks.add( 46 ); // TNT
+        illegalBlocks.add( 51 ); // Fire
         config.addDefault( "prism.appliers.never-place-block", illegalBlocks );
 
-        // Tracking
+        // Tracking (Defaults seem reasonable, ensure they match desired behavior)
         config.addDefault( "prism.tracking.block-break", true );
         config.addDefault( "prism.tracking.block-burn", true );
         config.addDefault( "prism.tracking.block-dispense", true );
@@ -154,7 +153,7 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.tracking.entity-break", true );
         config.addDefault( "prism.tracking.entity-dye", false );
         config.addDefault( "prism.tracking.entity-explode", true );
-        config.addDefault( "prism.tracking.entity-follow", true );
+        config.addDefault( "prism.tracking.entity-follow", true ); // Can be very spammy
         config.addDefault( "prism.tracking.entity-form", true );
         config.addDefault( "prism.tracking.entity-kill", true );
         config.addDefault( "prism.tracking.entity-leash", true );
@@ -171,9 +170,9 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.tracking.item-pickup", true );
         config.addDefault( "prism.tracking.item-remove", true );
         config.addDefault( "prism.tracking.item-rotate", true );
-        config.addDefault( "prism.tracking.lava-break", true );
+        config.addDefault( "prism.tracking.lava-break", true ); // Breaking obsidian from lava
         config.addDefault( "prism.tracking.lava-bucket", true );
-        config.addDefault( "prism.tracking.lava-flow", false );
+        config.addDefault( "prism.tracking.lava-flow", false ); // Can be extremely spammy
         config.addDefault( "prism.tracking.lava-ignite", true );
         config.addDefault( "prism.tracking.leaf-decay", true );
         config.addDefault( "prism.tracking.lighter", true );
@@ -197,15 +196,15 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.tracking.vehicle-enter", true );
         config.addDefault( "prism.tracking.vehicle-exit", true );
         config.addDefault( "prism.tracking.vehicle-place", true );
-        config.addDefault( "prism.tracking.water-break", true );
+        config.addDefault( "prism.tracking.water-break", true ); // Breaking ice from water
         config.addDefault( "prism.tracking.water-bucket", true );
-        config.addDefault( "prism.tracking.water-flow", false );
-        config.addDefault( "prism.tracking.world-edit", false );
+        config.addDefault( "prism.tracking.water-flow", false ); // Can be extremely spammy
+        config.addDefault( "prism.tracking.world-edit", false ); // Enable if you want to log WorldEdit actions through Prism
         config.addDefault( "prism.tracking.xp-pickup", false );
 
         // Tracker configs
         config.addDefault( "prism.track-player-ip-on-join", false );
-        config.addDefault( "prism.track-hopper-item-events", false );
+        config.addDefault( "prism.track-hopper-item-events", false ); // Set to true to enable hopper tracking via PrismInventoryMoveItemEvent
 
         final List<String> doNotTrackCommand = new ArrayList<String>();
         doNotTrackCommand.add( "vanish" );
@@ -228,13 +227,16 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.alerts.ores.enabled", true );
         config.addDefault( "prism.alerts.ores.log-to-console", true );
         config.addDefault( "prism.alerts.ores.log-commands", Arrays.asList("examplecommand <alert>") );
-        // Ore blocks
+        // Ore blocks (IDs for 1.7.10)
         final HashMap<String, String> oreBlocks = new HashMap<String, String>();
-        oreBlocks.put( "14", "&6" ); // iron
-        oreBlocks.put( "15", "&7" ); // gold
-        oreBlocks.put( "21", "&9" ); // lapis
-        oreBlocks.put( "56", "&b" ); // diamond
-        oreBlocks.put( "129", "&a" ); // emerald ore
+        oreBlocks.put( "14", "&e" ); // Gold Ore (Original was Iron, 14 is Gold Ore ID)
+        oreBlocks.put( "15", "&7" ); // Iron Ore (Original was Gold, 15 is Iron Ore ID)
+        oreBlocks.put( "21", "&9" ); // Lapis Lazuli Ore
+        oreBlocks.put( "56", "&b" ); // Diamond Ore
+        oreBlocks.put( "73", "&c" ); // Redstone Ore (Glowing or not, 73 is base)
+        oreBlocks.put( "129", "&a" ); // Emerald Ore
+        // Consider adding Coal Ore: 16
+        oreBlocks.put( "16", "&8"); // Coal Ore
         config.addDefault( "prism.alerts.ores.blocks", oreBlocks );
 
         // Illegal Command Alerts
@@ -260,25 +262,23 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.alerts.uses.enabled", true );
         config.addDefault( "prism.alerts.uses.log-to-console", true );
         config.addDefault( "prism.alerts.uses.log-commands", Arrays.asList("examplecommand <alert>") );
-        config.addDefault( "prism.alerts.uses.lighter", true );
-        config.addDefault( "prism.alerts.uses.lava", true );
+        config.addDefault( "prism.alerts.uses.lighter", true ); // Flint and Steel
+        config.addDefault( "prism.alerts.uses.lava", true );    // Lava bucket placement
 
-        List<String> monitorItems = new ArrayList<String>();
-        monitorItems.add( "7" );
-        monitorItems.add( "29" );
-        monitorItems.add( "46" );
-        monitorItems.add( "10" );
-        monitorItems.add( "11" );
-        config.addDefault( "prism.alerts.uses.item-placement", monitorItems );
-
-        monitorItems = new ArrayList<String>();
-        config.addDefault( "prism.alerts.uses.item-break", monitorItems );
+        List<String> monitorItemsPlacement = new ArrayList<String>();
+        monitorItemsPlacement.add( "7" );  // Bedrock (Admin abuse?)
+        monitorItemsPlacement.add( "46" ); // TNT
+        monitorItemsPlacement.add( "10" ); // Flowing Lava
+        monitorItemsPlacement.add( "11" ); // Still Lava
+        config.addDefault( "prism.alerts.uses.item-placement", monitorItemsPlacement );
+        List<String> monitorItemsBreak = new ArrayList<String>();
+        config.addDefault( "prism.alerts.uses.item-break", monitorItemsBreak );
 
         // Misc Alerts
-        config.addDefault( "prism.alerts.vanilla-xray.enabled", true );
+        config.addDefault( "prism.alerts.vanilla-xray.enabled", true ); // This likely refers to ore mining alerts
 
         // Internal
-        config.addDefault( "prism.queue-empty-tick-delay", 3 );
+        config.addDefault( "prism.queue-empty-tick-delay", 3 ); // How often to check the recording queue when empty
 
         // Copy defaults
         config.options().copyDefaults( true );
@@ -287,6 +287,5 @@ public class PrismConfig extends ConfigBase {
         plugin.saveConfig();
 
         return config;
-
     }
 }

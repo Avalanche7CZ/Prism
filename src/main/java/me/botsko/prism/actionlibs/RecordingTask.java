@@ -6,379 +6,315 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.List;
 
 import me.botsko.prism.Prism;
-import me.botsko.prism.PrismConfig;
 import me.botsko.prism.actions.Handler;
 import me.botsko.prism.players.PlayerIdentification;
 import me.botsko.prism.players.PrismPlayer;
 
 public class RecordingTask implements Runnable {
 
-    /**
-	 *
-	 */
     private final Prism plugin;
 
-    /**
-     *
-     * @param plugin
-     */
     public RecordingTask(Prism plugin) {
         this.plugin = plugin;
     }
 
     /**
-	 *
-	 */
+     * Called by the scheduler.
+     * If the queue isn't empty, proceeds to insert actions into the database.
+     */
     public void save() {
-        if( !RecordingQueue.getQueue().isEmpty() ) {
+        if (!RecordingQueue.getQueue().isEmpty()) {
             insertActionsIntoDatabase();
         }
     }
 
     /**
+     * Inserts a single action into the database immediately.
+     * This method is now transaction-safe for actions with extra data.
      *
-     * @param a
+     * @param a The Handler action to insert.
+     * @return The generated ID of the inserted action in prism_data, or 0 on failure.
      */
     public static int insertActionIntoDatabase(Handler a) {
-        String prefix = Prism.config.getString("prism.mysql.prefix");
-        int id = 0;
+        String prefix = Prism.config.getString("prism.database.tablePrefix", "prism_");
+        int generatedDataId = 0;
         Connection conn = null;
-        PreparedStatement s = null;
+        PreparedStatement psData = null;
+        PreparedStatement psExtraData = null;
         ResultSet generatedKeys = null;
+
         try {
 
-            // prepare to save to the db
-            a.save();
-
             conn = Prism.dbc();
-            if( conn == null ) {
-                Prism.log( "Prism database error. Connection should be there but it's not. This action wasn't logged." );
+            if (conn == null) {
+                Prism.log("Prism database error during single insert. Connection is null. Action not logged.");
+                return 0;
+            }
+            conn.setAutoCommit(false);
+
+            int world_id = Prism.prismWorlds.getOrDefault(a.getWorldName(), 0);
+            int action_id = Prism.prismActions.getOrDefault(a.getType().getName(), 0);
+            PrismPlayer prismPlayer = PlayerIdentification.cachePrismPlayer(a.getPlayerName());
+            int player_id = (prismPlayer != null) ? prismPlayer.getId() : 0;
+
+            if (world_id == 0 || action_id == 0 || player_id == 0) {
+                Prism.log("Error during single insert: Missing critical ID. World: " + a.getWorldName() + "(" + world_id +
+                        "), ActionType: " + a.getType().getName() + "(" + action_id +
+                        "), Player: " + a.getPlayerName() + "(" + player_id + "). Action not logged.");
+                if (conn != null) conn.rollback();
                 return 0;
             }
 
-            int world_id = 0;
-            if( Prism.prismWorlds.containsKey( a.getWorldName() ) ) {
-                world_id = Prism.prismWorlds.get( a.getWorldName() );
+            String sqlData = "INSERT INTO " + prefix + "data (epoch,action_id,player_id,world_id,block_id,block_subid,old_block_id,old_block_subid,x,y,z) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+            psData = conn.prepareStatement(sqlData, Statement.RETURN_GENERATED_KEYS);
+            psData.setLong(1, System.currentTimeMillis() / 1000L);
+            psData.setInt(2, action_id);
+            psData.setInt(3, player_id);
+            psData.setInt(4, world_id);
+            psData.setInt(5, a.getBlockId());
+            psData.setInt(6, a.getBlockSubId());
+            psData.setInt(7, a.getOldBlockId());
+            psData.setInt(8, a.getOldBlockSubId());
+            psData.setInt(9, (int) a.getX());
+            psData.setInt(10, (int) a.getY());
+            psData.setInt(11, (int) a.getZ());
+            psData.executeUpdate();
+
+            generatedKeys = psData.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                generatedDataId = generatedKeys.getInt(1);
+            } else {
+                Prism.log("Error during single insert: Failed to retrieve generated key for prism_data. Action for '" + a.getPlayerName() + "' not fully logged.");
+                conn.rollback();
+                return 0;
+            }
+            if (generatedDataId > 0 && a.getData() != null && !a.getData().isEmpty()) {
+                String sqlExtraData = "INSERT INTO " + prefix + "data_extra (data_id,data) VALUES (?,?)";
+                psExtraData = conn.prepareStatement(sqlExtraData);
+                psExtraData.setInt(1, generatedDataId);
+                psExtraData.setString(2, a.getData());
+                psExtraData.executeUpdate();
             }
 
-            int action_id = 0;
-            if( Prism.prismActions.containsKey( a.getType().getName() ) ) {
-                action_id = Prism.prismActions.get( a.getType().getName() );
+            conn.commit();
+
+        } catch (final SQLException e) {
+            Prism.log("SQLException during single action insert: " + e.getMessage());
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    Prism.log("SQLException on rollback during single insert: " + ex.getMessage());
+                }
             }
-
-            int player_id = 0;
-            PrismPlayer prismPlayer = PlayerIdentification.cachePrismPlayer( a.getPlayerName() );
-            if( prismPlayer != null ){
-                player_id = prismPlayer.getId();
-            }
-
-            if( world_id == 0 || action_id == 0 || player_id == 0 ) {
-                // @todo do something, error here
-            }
-
-            s = conn.prepareStatement(
-                    "INSERT INTO " + prefix + "data (epoch,action_id,player_id,world_id,block_id,block_subid,old_block_id,old_block_subid,x,y,z) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    Statement.RETURN_GENERATED_KEYS );
-            s.setLong( 1, System.currentTimeMillis() / 1000L );
-            s.setInt( 2, world_id );
-            s.setInt( 3, player_id );
-            s.setInt( 4, world_id );
-            s.setInt( 5, a.getBlockId() );
-            s.setInt( 6, a.getBlockSubId() );
-            s.setInt( 7, a.getOldBlockId() );
-            s.setInt( 8, a.getOldBlockSubId() );
-            s.setInt( 9, (int) a.getX() );
-            s.setInt( 10, (int) a.getY() );
-            s.setInt( 11, (int) a.getZ() );
-            s.executeUpdate();
-
-            generatedKeys = s.getGeneratedKeys();
-            if( generatedKeys.next() ) {
-                id = generatedKeys.getInt( 1 );
-            }
-
-            // Add insert query for extra data if needed
-            if( a.getData() != null && !a.getData().isEmpty() ) {
-                s = conn.prepareStatement( "INSERT INTO " + prefix + "data_extra (data_id,data) VALUES (?,?)" );
-                s.setInt( 1, id );
-                s.setString( 2, a.getData() );
-                s.executeUpdate();
-            }
-
-        } catch ( final SQLException e ) {
-            // plugin.handleDatabaseException( e );
+            generatedDataId = 0;
         } finally {
-            if( generatedKeys != null )
+            if (generatedKeys != null) try { generatedKeys.close(); } catch (final SQLException ignored) {}
+            if (psData != null) try { psData.close(); } catch (final SQLException ignored) {}
+            if (psExtraData != null) try { psExtraData.close(); } catch (final SQLException ignored) {}
+            if (conn != null) {
                 try {
-                    generatedKeys.close();
-                } catch ( final SQLException ignored ) {}
-            if( s != null )
-                try {
-                    s.close();
-                } catch ( final SQLException ignored ) {}
-            if( conn != null )
+                    conn.setAutoCommit(true);
+                } catch (SQLException ex) { /* ignored */ }
                 try {
                     conn.close();
-                } catch ( final SQLException ignored ) {}
+                } catch (final SQLException ignored) {}
+            }
         }
-        return id;
+        return generatedDataId;
     }
 
     /**
-     *
-     * @throws SQLException
+     * Inserts actions from the queue into the database in batches.
+     * This is the primary method for saving recorded actions.
+     * prism_data and prism_data_extra inserts are now within a single transaction.
      */
     public void insertActionsIntoDatabase() {
-        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+        String prefix = plugin.getConfig().getString("prism.database.tablePrefix", "prism_");
 
-        PreparedStatement s = null;
         Connection conn = null;
+        PreparedStatement psData = null;
+        PreparedStatement psExtraData = null;
+        ResultSet generatedKeys = null;
+        List<Handler> handlersInCurrentBatch = new ArrayList<>();
+        int actionsSuccessfullyPreparedForBatch = 0;
 
-        int actionsRecorded = 0;
         try {
+            int perBatchConfig = plugin.getConfig().getInt("prism.database.actions-per-insert-batch", 1000);
+            if (perBatchConfig < 1) perBatchConfig = 1000;
 
-            int perBatch = plugin.getConfig().getInt( "prism.database.actions-per-insert-batch" );
-            if( perBatch < 1 )
-                perBatch = 1000;
-
-            if( !RecordingQueue.getQueue().isEmpty() ) {
-
-                Prism.debug( "Beginning batch insert from queue. " + System.currentTimeMillis() );
-
-                final ArrayList<Handler> extraDataQueue = new ArrayList<Handler>();
-                conn = Prism.dbc();
-
-                // Handle dead connections
-                if( conn == null || conn.isClosed() ) {
-                    if( RecordingManager.failedDbConnectionCount == 0 ) {
-                        Prism.log( "Prism database error. Connection should be there but it's not. Leaving actions to log in queue." );
-                    }
-                    RecordingManager.failedDbConnectionCount++;
-                    if( RecordingManager.failedDbConnectionCount > plugin.getConfig().getInt(
-                            "prism.database.max-failures-before-wait" ) ) {
-                        Prism.log( "Too many problems connecting. Giving up for a bit." );
-                        scheduleNextRecording();
-                    }
-                    Prism.debug( "Database connection still missing, incrementing count." );
-                    return;
-                } else {
-                    RecordingManager.failedDbConnectionCount = 0;
-                }
-
-                // Connection valid, proceed
-                conn.setAutoCommit( false );
-                s = conn.prepareStatement(
-                        "INSERT INTO " + prefix + "data (epoch,action_id,player_id,world_id,block_id,block_subid,old_block_id,old_block_subid,x,y,z) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                        Statement.RETURN_GENERATED_KEYS );
-                int i = 0;
-                while ( !RecordingQueue.getQueue().isEmpty() ) {
-
-                    if( conn.isClosed() ) {
-                        Prism.log( "Prism database error. We have to bail in the middle of building primary bulk insert query." );
-                        break;
-                    }
-
-                    final Handler a = RecordingQueue.getQueue().poll();
-
-                    // poll() returns null if queue is empty
-                    if( a == null )
-                        break;
-
-                    int world_id = 0;
-                    if( Prism.prismWorlds.containsKey( a.getWorldName() ) ) {
-                        world_id = Prism.prismWorlds.get( a.getWorldName() );
-                    }
-
-                    int action_id = 0;
-                    if( Prism.prismActions.containsKey( a.getType().getName() ) ) {
-                        action_id = Prism.prismActions.get( a.getType().getName() );
-                    }
-
-                    int player_id = 0;
-                    PrismPlayer prismPlayer = PlayerIdentification.cachePrismPlayer( a.getPlayerName() );
-                    if( prismPlayer != null ){
-                        player_id = prismPlayer.getId();
-                    }
-
-                    if( world_id == 0 || action_id == 0 || player_id == 0 ) {
-                        // @todo do something, error here
-                        Prism.log( "Cache data was empty. Please report to developer: world_id:" + world_id + "/"
-                                + a.getWorldName() + " action_id:" + action_id + "/" + a.getType().getName()
-                                + " player_id:" + player_id + "/" + a.getPlayerName() );
-                        Prism.log( "HOWEVER, this likely means you have a broken prism database installation." );
-                        continue;
-                    }
-
-                    if( a.isCanceled() )
-                        continue;
-
-                    actionsRecorded++;
-
-                    s.setLong( 1, System.currentTimeMillis() / 1000L );
-                    s.setInt( 2, action_id );
-                    s.setInt( 3, player_id );
-                    s.setInt( 4, world_id );
-                    s.setInt( 5, a.getBlockId() );
-                    s.setInt( 6, a.getBlockSubId() );
-                    s.setInt( 7, a.getOldBlockId() );
-                    s.setInt( 8, a.getOldBlockSubId() );
-                    s.setInt( 9, (int) a.getX() );
-                    s.setInt( 10, (int) a.getY() );
-                    s.setInt( 11, (int) a.getZ() );
-                    s.addBatch();
-
-                    extraDataQueue.add( a );
-
-                    // Break out of the loop and just commit what we have
-                    if( i >= perBatch ) {
-                        Prism.debug( "Recorder: Batch max exceeded, running insert. Queue remaining: "
-                                + RecordingQueue.getQueue().size() );
-                        break;
-                    }
-                    i++;
-                }
-
-                s.executeBatch();
-
-                if( conn.isClosed() ) {
-                    Prism.log( "Prism database error. We have to bail in the middle of building primary bulk insert query." );
-                } else {
-                    conn.commit();
-                    Prism.debug( "Batch insert was commit: " + System.currentTimeMillis() );
-                }
-
-                // Save the current count to the queue for short historical data
-                plugin.queueStats.addRunCount( actionsRecorded );
-
-                // Insert extra data
-                insertExtraData( extraDataQueue, s.getGeneratedKeys() );
-
+            if (RecordingQueue.getQueue().isEmpty()) {
+                return;
             }
-        } catch ( final SQLException e ) {
-            e.printStackTrace();
-            plugin.handleDatabaseException( e );
-        } finally {
-            if( s != null )
-                try {
-                    s.close();
-                } catch ( final SQLException ignored ) {}
-            if( conn != null )
-                try {
-                    conn.close();
-                } catch ( final SQLException ignored ) {}
-        }
-    }
 
-    /**
-     *
-     * @param keys
-     * @throws SQLException
-     */
-    protected void insertExtraData(ArrayList<Handler> extraDataQueue, ResultSet keys) throws SQLException {
-        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+            Prism.debug("Beginning batch insert from queue. Current time: " + System.currentTimeMillis());
 
-        if( extraDataQueue.isEmpty() )
-            return;
+            conn = Prism.dbc();
 
-        PreparedStatement s = null;
-        final Connection conn = Prism.dbc();
-
-        if( conn == null || conn.isClosed() ) {
-            Prism.log( "Prism database error. Skipping extra data queue insertion." );
-            return;
-        }
-
-        try {
-            conn.setAutoCommit( false );
-            s = conn.prepareStatement( "INSERT INTO " + prefix + "data_extra (data_id,data) VALUES (?,?)" );
-            int i = 0;
-            while ( keys.next() ) {
-
-                if( conn.isClosed() ) {
-                    Prism.log( "Prism database error. We have to bail in the middle of building bulk insert extra data query." );
-                    break;
+            if (conn == null || conn.isClosed()) {
+                if (RecordingManager.failedDbConnectionCount == 0) {
+                    Prism.log("Prism DB Error: Connection null or closed before batch. Actions remain in queue.");
                 }
+                RecordingManager.failedDbConnectionCount++;
+                return;
+            }
+            RecordingManager.failedDbConnectionCount = 0;
 
-                // @todo should not happen
-                if( i >= extraDataQueue.size() ) {
-                    Prism.log( "Skipping extra data for " + prefix + "data.id " + keys.getInt( 1 )
-                            + " because the queue doesn't have data for it." );
+            conn.setAutoCommit(false);
+            String sqlData = "INSERT INTO " + prefix + "data (epoch,action_id,player_id,world_id,block_id,block_subid,old_block_id,old_block_subid,x,y,z) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+            psData = conn.prepareStatement(sqlData, Statement.RETURN_GENERATED_KEYS);
+
+            String sqlExtraData = "INSERT INTO " + prefix + "data_extra (data_id,data) VALUES (?,?)";
+            psExtraData = conn.prepareStatement(sqlExtraData);
+
+            int currentBatchSize = 0;
+            while (!RecordingQueue.getQueue().isEmpty() && currentBatchSize < perBatchConfig) {
+                final Handler a = RecordingQueue.getQueue().peek();
+                if (a == null) break;
+                if (a.isCanceled()) {
+                    RecordingQueue.getQueue().poll();
                     continue;
                 }
 
-                final Handler a = extraDataQueue.get( i );
+                int world_id = Prism.prismWorlds.getOrDefault(a.getWorldName(), 0);
+                int action_id = Prism.prismActions.getOrDefault(a.getType().getName(), 0);
+                PrismPlayer prismPlayer = PlayerIdentification.cachePrismPlayer(a.getPlayerName());
+                int player_id = (prismPlayer != null) ? prismPlayer.getId() : 0;
 
-                if( a.getData() != null && !a.getData().isEmpty() ) {
-                    s.setInt( 1, keys.getInt( 1 ) );
-                    s.setString( 2, a.getData() );
-                    s.addBatch();
+                if (world_id == 0 || action_id == 0 || player_id == 0) {
+                    Prism.log("Skipping action in batch due to missing ID: World: " + a.getWorldName() + "(" + world_id +
+                            "), ActionType: " + a.getType().getName() + "(" + action_id +
+                            "), Player: " + a.getPlayerName() + "(" + player_id + ")");
+                    RecordingQueue.getQueue().poll();
+                    continue;
                 }
 
-                i++;
+                RecordingQueue.getQueue().poll();
 
+
+                psData.setLong(1, System.currentTimeMillis() / 1000L);
+                psData.setInt(2, action_id);
+                psData.setInt(3, player_id);
+                psData.setInt(4, world_id);
+                psData.setInt(5, a.getBlockId());
+                psData.setInt(6, a.getBlockSubId());
+                psData.setInt(7, a.getOldBlockId());
+                psData.setInt(8, a.getOldBlockSubId());
+                psData.setInt(9, (int) a.getX());
+                psData.setInt(10, (int) a.getY());
+                psData.setInt(11, (int) a.getZ());
+                psData.addBatch();
+
+                handlersInCurrentBatch.add(a);
+                currentBatchSize++;
             }
-            s.executeBatch();
 
-            if( conn.isClosed() ) {
-                Prism.log( "Prism database error. We have to bail in the middle of building extra data bulk insert query." );
+            if (!handlersInCurrentBatch.isEmpty()) {
+                Prism.debug("Executing prism_data batch for " + handlersInCurrentBatch.size() + " actions.");
+                psData.executeBatch();
+
+                generatedKeys = psData.getGeneratedKeys();
+                int keyIndex = 0;
+                boolean hasAnyExtraDataInThisBatch = false;
+
+                while (generatedKeys.next()) {
+                    int currentGeneratedDataId = generatedKeys.getInt(1);
+                    if (keyIndex < handlersInCurrentBatch.size()) {
+                        Handler currentHandler = handlersInCurrentBatch.get(keyIndex);
+                        if (currentHandler.getData() != null && !currentHandler.getData().isEmpty()) {
+                            psExtraData.setInt(1, currentGeneratedDataId);
+                            psExtraData.setString(2, currentHandler.getData());
+                            psExtraData.addBatch();
+                            hasAnyExtraDataInThisBatch = true;
+                        }
+                    } else {
+                        Prism.log("Warning: More generated keys than handlers in batch. Key Index: " + keyIndex + ", Handler Count: " + handlersInCurrentBatch.size());
+                    }
+                    keyIndex++;
+                }
+                if (keyIndex != handlersInCurrentBatch.size()) {
+                    Prism.log("Warning: Mismatch in generated keys count (" + keyIndex +
+                            ") and batched prism_data actions (" + handlersInCurrentBatch.size() + "). Data integrity for extra_data might be affected.");
+                }
+
+                if (hasAnyExtraDataInThisBatch) {
+                    Prism.debug("Executing prism_data_extra batch.");
+                    psExtraData.executeBatch();
+                }
+
+                conn.commit();
+                actionsSuccessfullyPreparedForBatch = handlersInCurrentBatch.size();
+                Prism.debug("Batch insert committed. Actions recorded in this batch: " + actionsSuccessfullyPreparedForBatch + ". Time: " + System.currentTimeMillis());
+                plugin.queueStats.addRunCount(actionsSuccessfullyPreparedForBatch);
             } else {
                 conn.commit();
+                Prism.debug("No actions processed in this batch run (queue might be empty or actions filtered).");
             }
 
-        } catch ( final SQLException e ) {
+        } catch (final SQLException e) {
+            Prism.log("SQLException during batch insert: " + e.getMessage());
+            plugin.handleDatabaseException(e); // Use Prism's central handler
             e.printStackTrace();
-            plugin.handleDatabaseException( e );
-        } finally {
-            if( s != null )
+            if (conn != null) {
                 try {
-                    s.close();
-                } catch ( final SQLException ignored ) {}
-            try {
-                conn.close();
-            } catch ( final SQLException ignored ) {}
+                    if (!conn.isClosed()) {
+                        Prism.log("Rolling back transaction due to error.");
+                        conn.rollback();
+                    }
+                } catch (final SQLException ex) {
+                    Prism.log("SQLException during rollback: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+        } finally {
+            if (generatedKeys != null) try { generatedKeys.close(); } catch (final SQLException ignored) {}
+            if (psData != null) try { psData.close(); } catch (final SQLException ignored) {}
+            if (psExtraData != null) try { psExtraData.close(); } catch (final SQLException ignored) {}
+            if (conn != null) {
+                try {
+                    if (!conn.isClosed()) {
+                        conn.setAutoCommit(true);
+                    }
+                } catch (final SQLException ex) {
+                    Prism.log("SQLException resetting auto-commit: " + ex.getMessage());
+                } finally {
+                    try {
+                        conn.close();
+                    } catch (final SQLException ignored) {}
+                }
+            }
         }
     }
-
-    /**
-	 *
-	 */
     @Override
     public void run() {
-        if( RecordingManager.failedDbConnectionCount > 5 ) {
-            plugin.rebuildPool(); // force rebuild pool after several failures
+        if (RecordingManager.failedDbConnectionCount > plugin.getConfig().getInt("prism.database.max-failures-before-wait", 5)) {
+            Prism.log("Attempting to rebuild database connection pool due to " + RecordingManager.failedDbConnectionCount + " repeated failures.");
+            plugin.rebuildPool();
+            RecordingManager.failedDbConnectionCount = 0;
         }
         save();
         scheduleNextRecording();
     }
 
-    /**
-     *
-     * @return
-     */
     protected int getTickDelayForNextBatch() {
-
-        // If we have too many rejected connections, increase the schedule
-        if( RecordingManager.failedDbConnectionCount > plugin.getConfig().getInt(
-                "prism.database.max-failures-before-wait" ) ) { return RecordingManager.failedDbConnectionCount * 20; }
-
-        int recorder_tick_delay = plugin.getConfig().getInt( "prism.queue-empty-tick-delay" );
-        if( recorder_tick_delay < 1 ) {
-            recorder_tick_delay = 3;
+        if (RecordingManager.failedDbConnectionCount > plugin.getConfig().getInt("prism.database.max-failures-before-wait", 5)) {
+            int delayFactor = Math.min(RecordingManager.failedDbConnectionCount - plugin.getConfig().getInt("prism.database.max-failures-before-wait", 5), 30); // Cap factor
+            return (delayFactor + 1) * 20;
         }
-        return recorder_tick_delay;
+        int recorder_tick_delay = plugin.getConfig().getInt("prism.queue-empty-tick-delay", 3);
+        return Math.max(recorder_tick_delay, 1);
     }
 
-    /**
-	 *
-	 */
     protected void scheduleNextRecording() {
-        if( !plugin.isEnabled() ) {
-            Prism.log( "Can't schedule new recording tasks as plugin is now disabled. If you're shutting down the server, ignore me." );
+        if (!plugin.isEnabled()) {
+            Prism.log("Plugin disabled, not scheduling new recording task.");
             return;
         }
         plugin.recordingTask = plugin.getServer().getScheduler()
-                .runTaskLaterAsynchronously( plugin, new RecordingTask( plugin ), getTickDelayForNextBatch() );
+                .runTaskLaterAsynchronously(plugin, new RecordingTask(plugin), getTickDelayForNextBatch());
     }
 }

@@ -1,6 +1,5 @@
 package me.botsko.elixr;
 
-import java.util.Iterator;
 import org.bukkit.Bukkit;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -15,12 +14,12 @@ public class PlayerUtils {
       p.getInventory().setArmorContents((ItemStack[])null);
       InventoryUtils.updateInventory(p);
       if (!p.isDead()) {
-         p.setHealth(p.getMaxHealth());
+         p.setHealth((double) p.getMaxHealth());
          p.setFoodLevel(20);
 
-          for (PotionEffect effect : p.getActivePotionEffects()) {
-              p.removePotionEffect(effect.getType());
-          }
+         for (PotionEffect effect : p.getActivePotionEffects()) {
+            p.removePotionEffect(effect.getType());
+         }
 
          p.setFireTicks(0);
       }

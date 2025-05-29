@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 group = 'me.botsko'
@@ -18,12 +19,14 @@ repositories {
 }
 
 dependencies {
-    compileOnly files('libs/spigot-1.7.10-SNAPSHOT-b1657.jar')
-    compileOnly files('libs/forge-1.7.10-10.13.4.1614-1.7.10-universal.jar')
     compileOnly files('libs/worldedit-bukkit-6.1.jar')
     compileOnly files('libs/HeroChat.jar')
+    compileOnly files('libs/spigot-1.8.jar')
+    compileOnly files('libs/mariadb-java-client-3.3.3.jar')
+
     implementation 'com.google.code.gson:gson:2.8.9'
-    implementation 'org.apache.tomcat:tomcat-jdbc:9.0.55'
+    implementation 'org.apache.tomcat:tomcat-jdbc:9.0.80'
+    implementation 'org.apache.tomcat:tomcat-juli:9.0.80'
 }
 
 def targetJavaVersion = 8
@@ -39,7 +42,7 @@ java {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+    if (targetJavaVersion >= 8 || JavaVersion.current().isJava8Compatible()) {
         options.release.set(targetJavaVersion)
     }
 }
@@ -52,3 +55,21 @@ processResources {
         expand props
     }
 }
+
+shadowJar {
+    dependencies {
+        include dependency('org.apache.tomcat:tomcat-jdbc')
+        include dependency('org.apache.tomcat:tomcat-juli')
+        include dependency("org.mariadb.jdbc:mariadb-java-client:3.3.3")
+        include dependency('com.google.code.gson:gson')
+    }
+    relocate 'org.apache.tomcat.jdbc.pool', 'me.botsko.prism.libs.tomcat.jdbc.pool'
+    relocate 'org.apache.juli.logging', 'me.botsko.prism.libs.juli.logging'
+    relocate 'org.mariadb.jdbc', 'me.botsko.prism.libs.mariadb.jdbc'
+    relocate 'com.google.gson', 'me.botsko.prism.libs.gson'
+
+    archiveClassifier.set('')
+}
+
+build.dependsOn shadowJar
+jar.enabled = false

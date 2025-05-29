@@ -29,7 +29,6 @@ public class PlayerIdentification {
 
     public static PrismPlayer cachePrismPlayer( final Player player ){
 
-        // Lookup the player
         PrismPlayer prismPlayer = getPrismPlayer( player );
         if( prismPlayer != null ){
             prismPlayer = comparePlayerToCache( player, prismPlayer );
@@ -38,7 +37,6 @@ public class PlayerIdentification {
             return prismPlayer;
         }
 
-        // Player is new, create a record for them
         prismPlayer = addPlayer( player );
 
         return prismPlayer;
@@ -55,7 +53,6 @@ public class PlayerIdentification {
      */
     public static PrismPlayer cachePrismPlayer( final String playerName ){
 
-        // Lookup the player
         PrismPlayer prismPlayer = getPrismPlayer( playerName );
         if( prismPlayer != null ){
 //            prismPlayer = comparePlayerToCache( player, prismPlayer ); // This line was commented out and needs a Player object
