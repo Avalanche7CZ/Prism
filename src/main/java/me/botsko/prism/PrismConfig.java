@@ -51,6 +51,14 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.database.actions-per-insert-batch", 1000 );
         config.addDefault( "prism.database.force-write-queue-on-shutdown", true );
 
+        // --- MySQL Specific Settings (for backward compatibility) ---
+        config.addDefault( "prism.mysql.hostname", "127.0.0.1" );
+        config.addDefault( "prism.mysql.username", "root" );
+        config.addDefault( "prism.mysql.password", "" );
+        config.addDefault( "prism.mysql.database", "minecraft" );
+        config.addDefault( "prism.mysql.prefix", "prism_" );
+        config.addDefault( "prism.mysql.port", "3306" );
+
         // pste.me sharing.
         config.addDefault( "prism.paste.enable", false );
         config.addDefault( "prism.paste.username", "Username on http://pste.me/#/signup" );
