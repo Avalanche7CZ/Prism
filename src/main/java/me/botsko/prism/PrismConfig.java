@@ -27,13 +27,9 @@ public class PrismConfig extends ConfigBase {
 
         config.addDefault( "prism.debug", false );
         config.addDefault( "prism.allow-metrics", true );
-
         config.addDefault( "prism.database.type", "mysql" );
-        // For modern MySQL (8+): com.mysql.cj.jdbc.Driver
-        // For older MySQL (5.x) or MariaDB: com.mysql.jdbc.Driver or org.mariadb.jdbc.Driver
-        config.addDefault( "prism.database.driverClassName", "com.mysql.jdbc.Driver" ); // Or org.mariadb.jdbc.Driver if using MariaDB client
-        // JDBC URL Prefix (e.g., jdbc:mysql:// or jdbc:mariadb://)
-        config.addDefault( "prism.database.jdbcUrlPrefix", "jdbc:mysql://" ); // Or jdbc:mariadb://
+        config.addDefault( "prism.database.driverClassName", "com.mysql.jdbc.Driver" );
+        config.addDefault( "prism.database.jdbcUrlPrefix", "jdbc:mysql://" );
         // Common database settings
         config.addDefault( "prism.database.hostname", "127.0.0.1" );
         config.addDefault( "prism.database.port", "3306" );
@@ -46,18 +42,18 @@ public class PrismConfig extends ConfigBase {
         config.addDefault( "prism.database.pool.max-connections", 20 );
         config.addDefault( "prism.database.pool.initial-size", 10 );
         config.addDefault( "prism.database.pool.max-idle-connections", 10 );
-        config.addDefault( "prism.database.pool.max-wait-ms", 30000 ); // max-wait in milliseconds
+        config.addDefault( "prism.database.pool.max-wait-ms", 30000 );
         config.addDefault( "prism.database.max-failures-before-wait", 5 );
         config.addDefault( "prism.database.actions-per-insert-batch", 1000 );
         config.addDefault( "prism.database.force-write-queue-on-shutdown", true );
 
-        // --- MySQL Specific Settings (for backward compatibility) ---
-        config.addDefault( "prism.mysql.hostname", "127.0.0.1" );
-        config.addDefault( "prism.mysql.username", "root" );
-        config.addDefault( "prism.mysql.password", "" );
-        config.addDefault( "prism.mysql.database", "minecraft" );
-        config.addDefault( "prism.mysql.prefix", "prism_" );
-        config.addDefault( "prism.mysql.port", "3306" );
+//        // --- MySQL Specific Settings (for backward compatibility) ---
+//        config.addDefault( "prism.mysql.hostname", "127.0.0.1" );
+//        config.addDefault( "prism.mysql.username", "root" );
+//        config.addDefault( "prism.mysql.password", "" );
+//        config.addDefault( "prism.mysql.database", "minecraft" );
+//        config.addDefault( "prism.mysql.prefix", "prism_" );
+//        config.addDefault( "prism.mysql.port", "3306" );
 
         // pste.me sharing.
         config.addDefault( "prism.paste.enable", false );

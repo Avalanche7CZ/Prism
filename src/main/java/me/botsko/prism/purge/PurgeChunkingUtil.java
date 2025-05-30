@@ -14,7 +14,7 @@ public class PurgeChunkingUtil {
      * @param playername
      */
     public static int getMinimumPrimaryKey() {
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
         int id = 0;
         Connection conn = null;
         PreparedStatement s = null;
@@ -54,7 +54,7 @@ public class PurgeChunkingUtil {
      * @param playername
      */
     public static int getMaximumPrimaryKey() {
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
         int id = 0;
         Connection conn = null;
         PreparedStatement s = null;

@@ -23,7 +23,7 @@ public class SelectQueryBuilder extends QueryBuilder {
      */
     public SelectQueryBuilder(Prism plugin) {
         super( plugin );
-        prefix = Prism.config.getString("prism.mysql.prefix");
+        prefix = Prism.config.getString("prism.database.tablePrefix");
     }
 
     /**

@@ -242,7 +242,7 @@ public class ActionsQuery {
      * @param playername
      */
     public int getUsersLastPrismProcessId(String playername) {
-        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+        String prefix = plugin.getConfig().getString("prism.database.tablePrefix");
         int id = 0;
         Connection conn = null;
         PreparedStatement s = null;
@@ -290,7 +290,7 @@ public class ActionsQuery {
      * @param id
      */
     public PrismProcessAction getPrismProcessRecord(int id) {
-        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+        String prefix = plugin.getConfig().getString("prism.database.tablePrefix");
         PrismProcessAction process = null;
         Connection conn = null;
         PreparedStatement s = null;

@@ -203,7 +203,7 @@ public class PlayerIdentification {
      * @param player
      */
     protected static PrismPlayer addPlayer( Player player ){
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
 
         PrismPlayer prismPlayer = new PrismPlayer( 0, player.getUniqueId(), player.getName() );
 
@@ -246,7 +246,7 @@ public class PlayerIdentification {
      * @return
      */
     protected static PrismPlayer addPlayer( String playerName ){
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
 
         PrismPlayer fakePlayer = new PrismPlayer( 0, UUID.randomUUID(), playerName );
 
@@ -285,7 +285,7 @@ public class PlayerIdentification {
      * as well.
      */
     protected static void updatePlayer( PrismPlayer prismPlayer ){
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
 
         Connection conn = null;
         PreparedStatement s = null;
@@ -313,7 +313,7 @@ public class PlayerIdentification {
      * Loads `prism_players` ID for a player into our cache.
      */
     protected static PrismPlayer lookupByName( String playerName ){
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
         PrismPlayer prismPlayer = null;
         Connection conn = null;
         PreparedStatement s = null;
@@ -343,7 +343,7 @@ public class PlayerIdentification {
      * Loads `prism_players` ID for a player into our cache.
      */
     protected static PrismPlayer lookupByUUID( UUID uuid ){
-        String prefix = Prism.config.getString("prism.mysql.prefix");
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
         PrismPlayer prismPlayer = null;
         Connection conn = null;
         PreparedStatement s = null;
@@ -373,9 +373,7 @@ public class PlayerIdentification {
      * Build-load all online players into cache
      */
     public static void cacheOnlinePlayerPrimaryKeys(){
-        String prefix = Prism.config.getString("prism.mysql.prefix");
-
-        // For Bukkit 1.7.10, getOnlinePlayers() returns Player[]
+        String prefix = Prism.config.getString("prism.database.tablePrefix");
         Player[] onlinePlayersArray = Bukkit.getServer().getOnlinePlayers().toArray(new Player[0]);
         List<String> playerNames = new ArrayList<>();
         for( Player pl : onlinePlayersArray ){

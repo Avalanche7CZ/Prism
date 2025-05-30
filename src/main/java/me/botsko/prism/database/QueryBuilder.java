@@ -27,7 +27,7 @@ abstract public class QueryBuilder {
      */
     public QueryBuilder(Prism plugin) {
         this.plugin = plugin;
-        String prefix = plugin.getConfig().getString("prism.mysql.prefix");
+        String prefix = plugin.getConfig().getString("prism.database.tablePrefix");
         tableNameData = prefix + "data";
         tableNameDataExtra = prefix + "data_extra";
     }

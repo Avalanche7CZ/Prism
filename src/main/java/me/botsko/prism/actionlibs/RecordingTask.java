@@ -302,7 +302,7 @@ public class RecordingTask implements Runnable {
 
     protected int getTickDelayForNextBatch() {
         if (RecordingManager.failedDbConnectionCount > plugin.getConfig().getInt("prism.database.max-failures-before-wait", 5)) {
-            int delayFactor = Math.min(RecordingManager.failedDbConnectionCount - plugin.getConfig().getInt("prism.database.max-failures-before-wait", 5), 30); // Cap factor
+            int delayFactor = Math.min(RecordingManager.failedDbConnectionCount - plugin.getConfig().getInt("prism.database.max-failures-before-wait", 5), 30);
             return (delayFactor + 1) * 20;
         }
         int recorder_tick_delay = plugin.getConfig().getInt("prism.queue-empty-tick-delay", 3);
