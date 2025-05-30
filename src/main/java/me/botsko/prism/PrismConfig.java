@@ -27,33 +27,37 @@ public class PrismConfig extends ConfigBase {
 
         config.addDefault( "prism.debug", false );
         config.addDefault( "prism.allow-metrics", true );
-        config.addDefault( "prism.database.type", "mysql" );
-        config.addDefault( "prism.database.driverClassName", "com.mysql.jdbc.Driver" );
-        config.addDefault( "prism.database.jdbcUrlPrefix", "jdbc:mysql://" );
-        // Common database settings
-        config.addDefault( "prism.database.hostname", "127.0.0.1" );
-        config.addDefault( "prism.database.port", "3306" );
-        config.addDefault( "prism.database.databaseName", "minecraft" );
-        config.addDefault( "prism.database.username", "root" );
-        config.addDefault( "prism.database.password", "" );
-        config.addDefault( "prism.database.tablePrefix", "prism_" );
+        // --- Database Settings ---
+        config.addDefault("prism.database.type", "sqlite"); // Changed default to sqlite for easy setup
+        // Options: mysql, mariadb, postgresql, h2, sqlite
 
-        // Connection Pool settings (remain generic)
-        config.addDefault( "prism.database.pool.max-connections", 20 );
-        config.addDefault( "prism.database.pool.initial-size", 10 );
-        config.addDefault( "prism.database.pool.max-idle-connections", 10 );
-        config.addDefault( "prism.database.pool.max-wait-ms", 30000 );
-        config.addDefault( "prism.database.max-failures-before-wait", 5 );
-        config.addDefault( "prism.database.actions-per-insert-batch", 1000 );
-        config.addDefault( "prism.database.force-write-queue-on-shutdown", true );
+        // --- Settings for server-based databases (MySQL, MariaDB, PostgreSQL) ---
+        config.addDefault("prism.database.hostname", "127.0.0.1");
+        config.addDefault("prism.database.port", "3306"); // Default for MySQL/MariaDB, PostgreSQL is 5432
+        config.addDefault("prism.database.databaseName", "minecraft");
+        config.addDefault("prism.database.username", "root");
+        config.addDefault("prism.database.password", "");
+        config.addDefault("prism.database.tablePrefix", "prism_");
 
-//        // --- MySQL Specific Settings (for backward compatibility) ---
-//        config.addDefault( "prism.mysql.hostname", "127.0.0.1" );
-//        config.addDefault( "prism.mysql.username", "root" );
-//        config.addDefault( "prism.mysql.password", "" );
-//        config.addDefault( "prism.mysql.database", "minecraft" );
-//        config.addDefault( "prism.mysql.prefix", "prism_" );
-//        config.addDefault( "prism.mysql.port", "3306" );
+        // --- Settings for file-based databases (H2, SQLite) ---
+        config.addDefault("prism.database.filePath", "prism.db"); // Filename, relative to plugin data folder
+
+        // --- H2 Specific Settings ---
+        config.addDefault("prism.database.h2.mysqlMode", true); // For better compatibility if migrating or using MySQL-like queries
+        config.addDefault("prism.database.h2.autoServer", false); // Allows multiple connections to the same H2 file db
+
+        // --- JDBC Driver and URL (can be overridden per type if needed, but usually auto-detected) ---
+        config.addDefault("prism.database.driverClassName", "org.sqlite.JDBC"); // Example for SQLite
+        config.addDefault("prism.database.jdbcUrlPrefix", "jdbc:sqlite:"); // Example for SQLite
+
+        // --- Connection Pool settings (Tomcat JDBC Pool) ---
+        config.addDefault("prism.database.pool.max-connections", 20);
+        config.addDefault("prism.database.pool.initial-size", 5); // Reduced default initial size
+        config.addDefault("prism.database.pool.max-idle-connections", 10);
+        config.addDefault("prism.database.pool.max-wait-ms", 30000);
+        config.addDefault("prism.database.max-failures-before-wait", 5);
+        config.addDefault("prism.database.actions-per-insert-batch", 1000);
+        config.addDefault("prism.database.force-write-queue-on-shutdown", true);
 
         // pste.me sharing.
         config.addDefault( "prism.paste.enable", false );
@@ -239,7 +243,6 @@ public class PrismConfig extends ConfigBase {
         oreBlocks.put( "56", "&b" ); // Diamond Ore
         oreBlocks.put( "73", "&c" ); // Redstone Ore (Glowing or not, 73 is base)
         oreBlocks.put( "129", "&a" ); // Emerald Ore
-        // Consider adding Coal Ore: 16
         oreBlocks.put( "16", "&8"); // Coal Ore
         config.addDefault( "prism.alerts.ores.blocks", oreBlocks );
 
@@ -278,16 +281,12 @@ public class PrismConfig extends ConfigBase {
         List<String> monitorItemsBreak = new ArrayList<String>();
         config.addDefault( "prism.alerts.uses.item-break", monitorItemsBreak );
 
-        // Misc Alerts
         config.addDefault( "prism.alerts.vanilla-xray.enabled", true ); // This likely refers to ore mining alerts
 
-        // Internal
         config.addDefault( "prism.queue-empty-tick-delay", 3 ); // How often to check the recording queue when empty
 
-        // Copy defaults
         config.options().copyDefaults( true );
 
-        // save the defaults/config
         plugin.saveConfig();
 
         return config;

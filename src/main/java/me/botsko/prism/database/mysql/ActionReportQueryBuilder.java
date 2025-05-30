@@ -7,54 +7,30 @@ import me.botsko.prism.actionlibs.QueryParameters;
 
 public class ActionReportQueryBuilder extends SelectQueryBuilder {
 
-    /**
-     * 
-     * @param plugin
-     */
     public ActionReportQueryBuilder(Prism plugin) {
         super( plugin );
     }
 
-    /**
-     * 
-     * @param parameters
-     * @param shouldGroup
-     * @return
-     */
     @Override
     public String getQuery(QueryParameters parameters, boolean shouldGroup) {
-
         this.parameters = parameters;
         this.shouldGroup = shouldGroup;
-
-        // Reset
         columns = new ArrayList<String>();
         conditions = new ArrayList<String>();
-
         String query = select();
-
         query += ";";
-
         if( plugin.getConfig().getBoolean( "prism.debug" ) ) {
             Prism.debug( query );
         }
-
         return query;
-
     }
 
-    /**
-	 * 
-	 */
     @Override
     public String select() {
-        String prefix = Prism.config.getString("prism.database.tablePrefix");
-
-        final String sql = "SELECT COUNT(*), a.action " + "FROM " + prefix + "data "
-                + "INNER JOIN " + prefix + "actions a ON a.action_id = " + prefix + "data.action_id " + where() + " "
-                + "GROUP BY a.action_id " + "ORDER BY COUNT(*) DESC";
-
+        String prefix = plugin.getTablePrefix();
+        final String sql = "SELECT COUNT(*) AS `counted`, a.`action` " + "FROM `" + prefix + "data` "
+                + "INNER JOIN `" + prefix + "actions` a ON a.`action_id` = `" + prefix + "data`.`action_id` " + where() + " "
+                + "GROUP BY a.`action_id`, a.`action` " + "ORDER BY `counted` DESC";
         return sql;
-
     }
 }
