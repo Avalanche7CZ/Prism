@@ -7,6 +7,7 @@ import me.botsko.prism.commandlibs.SubHandler;
 import java.sql.Connection;
 import java.util.List;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitScheduler;
 
@@ -76,7 +77,7 @@ public class RecorderCommand implements SubHandler {
                 Connection conn = null;
                 try {
 
-                    conn = Prism.dbc();
+                    conn = PrismDatabaseHandler.dbc();
                     if( conn == null || conn.isClosed() ) {
                         call.getSender()
                                 .sendMessage(

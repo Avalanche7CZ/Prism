@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.plugin.Plugin;
 
 import me.botsko.elixr.TypeUtils;
@@ -54,7 +55,7 @@ public class ActionRegistry {
                 "Invalid action type. Custom actions must contain two hyphens." ); }
 
         // Register custom action type with the db
-        Prism.addActionName( actionType.getName() );
+        PrismDatabaseHandler.addActionName( actionType.getName() );
 
         registeredActions.put( actionType.getName(), actionType );
 

@@ -4,6 +4,7 @@ import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.ActionFactory;
 import me.botsko.prism.actionlibs.RecordingQueue;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.TreeType;
 import org.bukkit.block.BlockState;
 import org.bukkit.event.EventHandler;
@@ -47,7 +48,7 @@ public class PrismWorldEvents implements Listener {
         final String worldName = event.getWorld().getName();
 
         if( !Prism.prismWorlds.containsKey( worldName ) ) {
-            Prism.addWorldName( worldName );
+            PrismDatabaseHandler.addWorldName( worldName );
         }
     }
 }

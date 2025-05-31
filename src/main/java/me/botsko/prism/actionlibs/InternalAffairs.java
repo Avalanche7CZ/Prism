@@ -3,6 +3,7 @@ package me.botsko.prism.actionlibs;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitScheduler;
 
@@ -46,7 +47,7 @@ public class InternalAffairs implements Runnable {
         Connection conn = null;
         try {
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             if( conn == null ) {
                 Prism.log( "[InternalAffairs] Pool returned NULL instead of a valid connection." );
             } else if( conn.isClosed() ) {

@@ -1,9 +1,9 @@
 name: Prism
 main: me.botsko.prism.Prism
-version: 2.0.6
+version: ${version}
 softdepend: [WorldEdit,HeroChat]
-author: viveleroi
-website: http://discover-prism.com
+author: [Avalanche7CZ,viveleroi]
+website: https://github.com/Avalanche7CZ/Prism
 commands:
    prism:
       description: Base command for everything Prism

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.QueryParameters;
+import me.botsko.prism.database.PrismDatabaseHandler;
 
 public class BlockReportQueryBuilder extends SelectQueryBuilder {
 
@@ -27,7 +28,7 @@ public class BlockReportQueryBuilder extends SelectQueryBuilder {
 
     @Override
     public String select() {
-        String prefix = plugin.getTablePrefix();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
         parameters.addActionType( "block-place" );
         String originalWhere = where();
 

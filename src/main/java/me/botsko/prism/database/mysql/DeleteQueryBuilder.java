@@ -1,6 +1,7 @@
 package me.botsko.prism.database.mysql;
 
 import me.botsko.prism.Prism;
+import me.botsko.prism.database.PrismDatabaseHandler;
 
 public class DeleteQueryBuilder extends SelectQueryBuilder {
 
@@ -10,8 +11,8 @@ public class DeleteQueryBuilder extends SelectQueryBuilder {
 
     @Override
     public String select() {
-        String prefix = plugin.getTablePrefix();
-        if (plugin.getDbType().equalsIgnoreCase("sqlite")) {
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        if (PrismDatabaseHandler.getDbType().equalsIgnoreCase("sqlite")) {
             return "DELETE FROM `" + prefix + "data`";
         } else {
             return "DELETE `" + prefix + "data` FROM `" + prefix + "data`" +
@@ -31,7 +32,7 @@ public class DeleteQueryBuilder extends SelectQueryBuilder {
 
     @Override
     protected String limit() {
-        if (plugin.getDbType().equalsIgnoreCase("sqlite")) {
+        if (PrismDatabaseHandler.getDbType().equalsIgnoreCase("sqlite")) {
             return ""; // SQLite DELETE does not support LIMIT directly in this form with WHERE from main query
         }
         return "";

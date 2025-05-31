@@ -12,6 +12,7 @@ import java.util.List;
 
 import me.botsko.prism.Prism;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 @SuppressWarnings("deprecation")
@@ -120,15 +121,15 @@ public class PlayerIdentification {
     protected static PrismPlayer addPlayer( Player player ){
         Prism pluginInstance = (Prism) Bukkit.getPluginManager().getPlugin("Prism");
         if (pluginInstance == null) return null;
-        String prefix = pluginInstance.getTablePrefix();
-        String dbType = pluginInstance.getDbType();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        String dbType = PrismDatabaseHandler.getDbType();
 
         PrismPlayer prismPlayer = new PrismPlayer( 0, player.getUniqueId(), player.getName() );
         Connection conn = null;
         PreparedStatement s = null;
         ResultSet rs = null;
         try {
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             if (dbType.equalsIgnoreCase("mysql") || dbType.equalsIgnoreCase("mariadb")) {
                 s = conn.prepareStatement( "INSERT INTO `" + prefix + "players` (`player`,`player_uuid`) VALUES (?,UNHEX(?))" , Statement.RETURN_GENERATED_KEYS);
                 s.setString(1, player.getName() );
@@ -148,7 +149,7 @@ public class PlayerIdentification {
                 throw new SQLException("Insert statement failed - no generated key obtained.");
             }
         } catch (SQLException e) {
-            pluginInstance.handleDatabaseException(e);
+            PrismDatabaseHandler.handleDatabaseException(e);
         } finally {
             if(rs != null) try { rs.close(); } catch (SQLException e) {}
             if(s != null) try { s.close(); } catch (SQLException e) {}
@@ -160,15 +161,15 @@ public class PlayerIdentification {
     protected static PrismPlayer addPlayer( String playerName ){
         Prism pluginInstance = (Prism) Bukkit.getPluginManager().getPlugin("Prism");
         if (pluginInstance == null) return null;
-        String prefix = pluginInstance.getTablePrefix();
-        String dbType = pluginInstance.getDbType();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        String dbType = PrismDatabaseHandler.getDbType();
 
         PrismPlayer fakePlayer = new PrismPlayer( 0, UUID.randomUUID(), playerName );
         Connection conn = null;
         PreparedStatement s = null;
         ResultSet rs = null;
         try {
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             if (dbType.equalsIgnoreCase("mysql") || dbType.equalsIgnoreCase("mariadb")) {
                 s = conn.prepareStatement( "INSERT INTO `" + prefix + "players` (`player`,`player_uuid`) VALUES (?,UNHEX(?))" , Statement.RETURN_GENERATED_KEYS);
                 s.setString(1, fakePlayer.getName() );
@@ -188,7 +189,7 @@ public class PlayerIdentification {
                 throw new SQLException("Insert statement failed - no generated key obtained.");
             }
         } catch (SQLException e) {
-            pluginInstance.handleDatabaseException(e);
+            PrismDatabaseHandler.handleDatabaseException(e);
         } finally {
             if(rs != null) try { rs.close(); } catch (SQLException e) {}
             if(s != null) try { s.close(); } catch (SQLException e) {}
@@ -200,13 +201,13 @@ public class PlayerIdentification {
     protected static void updatePlayer( PrismPlayer prismPlayer ){
         Prism pluginInstance = (Prism) Bukkit.getPluginManager().getPlugin("Prism");
         if (pluginInstance == null) return;
-        String prefix = pluginInstance.getTablePrefix();
-        String dbType = pluginInstance.getDbType();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        String dbType = PrismDatabaseHandler.getDbType();
 
         Connection conn = null;
         PreparedStatement s = null;
         try {
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             if (dbType.equalsIgnoreCase("mysql") || dbType.equalsIgnoreCase("mariadb")) {
                 s = conn.prepareStatement( "UPDATE `" + prefix + "players` SET `player` = ?, `player_uuid` = UNHEX(?) WHERE `player_id` = ?");
                 s.setString(1, prismPlayer.getName() );
@@ -220,7 +221,7 @@ public class PlayerIdentification {
             }
             s.executeUpdate();
         } catch (SQLException e) {
-            pluginInstance.handleDatabaseException(e);
+            PrismDatabaseHandler.handleDatabaseException(e);
         } finally {
             if(s != null) try { s.close(); } catch (SQLException e) {}
             if(conn != null) try { conn.close(); } catch (SQLException e) {}
@@ -230,15 +231,15 @@ public class PlayerIdentification {
     protected static PrismPlayer lookupByName( String playerName ){
         Prism pluginInstance = (Prism) Bukkit.getPluginManager().getPlugin("Prism");
         if (pluginInstance == null) return null;
-        String prefix = pluginInstance.getTablePrefix();
-        String dbType = pluginInstance.getDbType();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        String dbType = PrismDatabaseHandler.getDbType();
 
         PrismPlayer prismPlayer = null;
         Connection conn = null;
         PreparedStatement s = null;
         ResultSet rs = null;
         try {
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             String sql;
             if (dbType.equalsIgnoreCase("mysql") || dbType.equalsIgnoreCase("mariadb")) {
                 sql = "SELECT `player_id`, `player`, HEX(`player_uuid`) as `uuid_str` FROM `" + prefix + "players` WHERE `player` = ?";
@@ -258,7 +259,7 @@ public class PlayerIdentification {
                 prismPlayer = new PrismPlayer( rs.getInt("player_id"), uuid, rs.getString("player") );
             }
         } catch (SQLException e) {
-            pluginInstance.handleDatabaseException(e);
+            PrismDatabaseHandler.handleDatabaseException(e);
         } finally {
             if(rs != null) try { rs.close(); } catch (SQLException e) {}
             if(s != null) try { s.close(); } catch (SQLException e) {}
@@ -270,15 +271,15 @@ public class PlayerIdentification {
     protected static PrismPlayer lookupByUUID( UUID uuid ){
         Prism pluginInstance = (Prism) Bukkit.getPluginManager().getPlugin("Prism");
         if (pluginInstance == null) return null;
-        String prefix = pluginInstance.getTablePrefix();
-        String dbType = pluginInstance.getDbType();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        String dbType = PrismDatabaseHandler.getDbType();
 
         PrismPlayer prismPlayer = null;
         Connection conn = null;
         PreparedStatement s = null;
         ResultSet rs = null;
         try {
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             String sql;
             if (dbType.equalsIgnoreCase("mysql") || dbType.equalsIgnoreCase("mariadb")) {
                 sql = "SELECT `player_id`, `player`, HEX(`player_uuid`) as `uuid_str` FROM `" + prefix + "players` WHERE `player_uuid` = UNHEX(?)";
@@ -300,7 +301,7 @@ public class PlayerIdentification {
                 prismPlayer = new PrismPlayer( rs.getInt("player_id"), foundUuid, rs.getString("player") );
             }
         } catch (SQLException e) {
-            pluginInstance.handleDatabaseException(e);
+            PrismDatabaseHandler.handleDatabaseException(e);
         } finally {
             if(rs != null) try { rs.close(); } catch (SQLException e) {}
             if(s != null) try { s.close(); } catch (SQLException e) {}
@@ -312,8 +313,8 @@ public class PlayerIdentification {
     public static void cacheOnlinePlayerPrimaryKeys(){
         Prism pluginInstance = (Prism) Bukkit.getPluginManager().getPlugin("Prism");
         if (pluginInstance == null) return;
-        String prefix = pluginInstance.getTablePrefix();
-        String dbType = pluginInstance.getDbType();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
+        String dbType = PrismDatabaseHandler.getDbType();
 
         Player[] onlinePlayersArray = Bukkit.getServer().getOnlinePlayers().toArray(new Player[0]);
         List<String> playerNames = new ArrayList<>();
@@ -327,7 +328,7 @@ public class PlayerIdentification {
         PreparedStatement s = null;
         ResultSet rs = null;
         try {
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             StringBuilder sqlBuilder = new StringBuilder();
             if (dbType.equalsIgnoreCase("mysql") || dbType.equalsIgnoreCase("mariadb")) {
                 sqlBuilder.append("SELECT `player_id`, `player`, HEX(`player_uuid`) as `uuid_str` FROM `");
@@ -361,7 +362,7 @@ public class PlayerIdentification {
                 }
             }
         } catch (SQLException e) {
-            pluginInstance.handleDatabaseException(e);
+            PrismDatabaseHandler.handleDatabaseException(e);
         } finally {
             if(rs != null) try { rs.close(); } catch (SQLException e) {}
             if(s != null) try { s.close(); } catch (SQLException e) {}

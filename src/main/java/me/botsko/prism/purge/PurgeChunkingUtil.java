@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import me.botsko.prism.Prism;
+import me.botsko.prism.database.PrismDatabaseHandler;
 
 public class PurgeChunkingUtil {
 
@@ -21,7 +22,7 @@ public class PurgeChunkingUtil {
         ResultSet rs = null;
         try {
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             s = conn.prepareStatement( "SELECT MIN(id) FROM " + prefix + "data" );
             s.executeQuery();
             rs = s.getResultSet();
@@ -61,7 +62,7 @@ public class PurgeChunkingUtil {
         ResultSet rs = null;
         try {
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             s = conn.prepareStatement( "SELECT id FROM " + prefix + "data ORDER BY id DESC LIMIT 1;" );
             s.executeQuery();
             rs = s.getResultSet();

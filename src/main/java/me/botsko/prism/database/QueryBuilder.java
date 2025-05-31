@@ -20,7 +20,7 @@ abstract public class QueryBuilder {
 
     public QueryBuilder(Prism plugin) {
         this.plugin = plugin;
-        String prefix = plugin.getTablePrefix();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
         tableNameData = prefix + "data";
         tableNameDataExtra = prefix + "data_extra";
     }

@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.entity.Player;
 
 import me.botsko.prism.Prism;
@@ -44,7 +45,7 @@ public class Settings {
                 finalKey = getPlayerKey( player, key );
             }
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             s = conn.prepareStatement( "DELETE FROM " + prefix + "meta WHERE k = ?" );
             s.setString( 1, finalKey );
             s.executeUpdate();
@@ -90,7 +91,7 @@ public class Settings {
                 finalKey = getPlayerKey( player, key );
             }
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             s = conn.prepareStatement( "DELETE FROM " + prefix + "meta WHERE k = ?" );
             s.setString( 1, finalKey );
             s.executeUpdate();
@@ -141,7 +142,7 @@ public class Settings {
                 finalKey = getPlayerKey( player, key );
             }
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             s = conn.prepareStatement( "SELECT v FROM " + prefix + "meta WHERE k = ? LIMIT 0,1" );
             s.setString( 1, finalKey );
             rs = s.executeQuery();

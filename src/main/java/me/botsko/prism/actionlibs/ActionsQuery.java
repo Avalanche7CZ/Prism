@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -94,7 +95,7 @@ public class ActionsQuery {
 
                 plugin.eventTimer.recordTimedEvent( "query started" );
 
-                conn = Prism.dbc();
+                conn = PrismDatabaseHandler.dbc();
 
                 // Handle dead connections
                 if( conn == null || conn.isClosed() ) {
@@ -192,7 +193,7 @@ public class ActionsQuery {
                     }
                 }
             } catch ( final SQLException e ) {
-                plugin.handleDatabaseException( e );
+                PrismDatabaseHandler.handleDatabaseException( e );
             } finally {
                 if( rs != null )
                     try {
@@ -251,7 +252,7 @@ public class ActionsQuery {
 
             final int action_id = Prism.prismActions.get( "prism-process" );
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
 
             if( conn != null && !conn.isClosed() ) {
                 s = conn.prepareStatement( "SELECT id FROM " + prefix + "data JOIN " + prefix + "players p ON p.player_id = " + prefix + "data.player_id WHERE action_id = ? AND p.player = ? ORDER BY id DESC LIMIT 1" );
@@ -267,7 +268,7 @@ public class ActionsQuery {
                 Prism.log( "Prism database error. getUsersLastPrismProcessId cannot continue." );
             }
         } catch ( final SQLException e ) {
-            plugin.handleDatabaseException( e );
+            PrismDatabaseHandler.handleDatabaseException( e );
         } finally {
             if( rs != null )
                 try {
@@ -305,7 +306,7 @@ public class ActionsQuery {
             sql += " LEFT JOIN " + prefix + "data_extra ex ON ex.data_id = d.id ";
             sql += " WHERE d.id = ?";
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
 
             if( conn != null && !conn.isClosed() ) {
                 s = conn.prepareStatement( sql );
@@ -330,7 +331,7 @@ public class ActionsQuery {
                 Prism.log( "Prism database error. getPrismProcessRecord cannot continue." );
             }
         } catch ( final SQLException e ) {
-            plugin.handleDatabaseException( e );
+            PrismDatabaseHandler.handleDatabaseException( e );
         } finally {
             if( rs != null )
                 try {
@@ -360,7 +361,7 @@ public class ActionsQuery {
             final DeleteQueryBuilder dqb = new DeleteQueryBuilder( plugin );
             // Build conditions based off final args
             final String query = dqb.getQuery( parameters, shouldGroup );
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             if( conn != null && !conn.isClosed() ) {
                 s = conn.createStatement();
                 cycle_rows_affected = s.executeUpdate( query );
@@ -369,7 +370,7 @@ public class ActionsQuery {
                 Prism.log( "Prism database error. Purge cannot continue." );
             }
         } catch ( final SQLException e ) {
-            plugin.handleDatabaseException( e );
+            PrismDatabaseHandler.handleDatabaseException( e );
         } finally {
             if( s != null )
                 try {

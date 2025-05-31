@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.QueryParameters;
+import me.botsko.prism.database.PrismDatabaseHandler;
 
 public class ActionReportQueryBuilder extends SelectQueryBuilder {
 
@@ -27,7 +28,7 @@ public class ActionReportQueryBuilder extends SelectQueryBuilder {
 
     @Override
     public String select() {
-        String prefix = plugin.getTablePrefix();
+        String prefix = PrismDatabaseHandler.getTablePrefix();
         final String sql = "SELECT COUNT(*) AS `counted`, a.`action` " + "FROM `" + prefix + "data` "
                 + "INNER JOIN `" + prefix + "actions` a ON a.`action_id` = `" + prefix + "data`.`action_id` " + where() + " "
                 + "GROUP BY a.`action_id`, a.`action` " + "ORDER BY `counted` DESC";

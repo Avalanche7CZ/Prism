@@ -10,6 +10,7 @@ import me.botsko.prism.appliers.PrismProcessType;
 import me.botsko.prism.commandlibs.CallInfo;
 import me.botsko.prism.commandlibs.PreprocessArgs;
 import me.botsko.prism.commandlibs.SubHandler;
+import me.botsko.prism.database.PrismDatabaseHandler;
 import me.botsko.prism.database.mysql.ActionReportQueryBuilder;
 import me.botsko.prism.database.mysql.BlockReportQueryBuilder;
 import me.botsko.prism.utils.MiscUtils;
@@ -144,12 +145,12 @@ public class ReportCommand implements SubHandler {
                 + RecordingManager.failedDbConnectionCount ) );
         sender.sendMessage( Prism.messenger.playerMsg( "Actions in queue: " + ChatColor.WHITE
                 + RecordingQueue.getQueueSize() ) );
-        sender.sendMessage( Prism.messenger.playerMsg( "Pool active: " + ChatColor.WHITE + Prism.getPool().getActive() ) );
-        sender.sendMessage( Prism.messenger.playerMsg( "Pool idle: " + ChatColor.WHITE + Prism.getPool().getIdle() ) );
+        sender.sendMessage( Prism.messenger.playerMsg( "Pool active: " + ChatColor.WHITE + PrismDatabaseHandler.getPool().getActive() ) );
+        sender.sendMessage( Prism.messenger.playerMsg( "Pool idle: " + ChatColor.WHITE + PrismDatabaseHandler.getPool().getIdle() ) );
         sender.sendMessage( Prism.messenger.playerMsg( "Pool active count: " + ChatColor.WHITE
-                + Prism.getPool().getNumActive() ) );
+                + PrismDatabaseHandler.getPool().getNumActive() ) );
         sender.sendMessage( Prism.messenger.playerMsg( "Pool idle count: " + ChatColor.WHITE
-                + Prism.getPool().getNumIdle() ) );
+                + PrismDatabaseHandler.getPool().getNumIdle() ) );
 
         boolean recorderActive = false;
         if( plugin.recordingTask != null ) {
@@ -172,7 +173,7 @@ public class ReportCommand implements SubHandler {
         Connection conn = null;
         try {
 
-            conn = Prism.dbc();
+            conn = PrismDatabaseHandler.dbc();
             if( conn == null ) {
                 sender.sendMessage( Prism.messenger.playerError( "Pool returned NULL instead of a valid connection." ) );
             } else if( conn.isClosed() ) {
@@ -250,7 +251,7 @@ public class ReportCommand implements SubHandler {
                 ResultSet rs = null;
                 try {
 
-                    conn = Prism.dbc();
+                    conn = PrismDatabaseHandler.dbc();
                     s = conn.prepareStatement( sql );
                     s.executeQuery();
                     rs = s.getResultSet();
@@ -354,7 +355,7 @@ public class ReportCommand implements SubHandler {
                 ResultSet rs = null;
                 try {
 
-                    conn = Prism.dbc();
+                    conn = PrismDatabaseHandler.dbc();
                     s = conn.prepareStatement( sql );
                     s.executeQuery();
                     rs = s.getResultSet();

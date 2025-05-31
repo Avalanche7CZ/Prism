@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import me.botsko.prism.database.PrismDatabaseHandler;
 import org.bukkit.Location;
 import org.bukkit.util.Vector;
 
@@ -20,8 +21,8 @@ public class SelectQueryBuilder extends QueryBuilder {
 
     public SelectQueryBuilder(Prism plugin) {
         super( plugin );
-        this.prefix = plugin.getTablePrefix();
-        this.dbType = plugin.getDbType();
+        this.prefix = PrismDatabaseHandler.getTablePrefix();
+        this.dbType = PrismDatabaseHandler.getDbType();
     }
 
     @Override
