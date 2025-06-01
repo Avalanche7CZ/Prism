@@ -10,52 +10,68 @@ import org.bukkit.plugin.Plugin;
 
 public class PrismConfig extends ConfigBase {
 
-    /**
-     * * @param plugin
-     */
     public PrismConfig(Plugin plugin) {
         super( plugin );
     }
 
-    /**
-     *
-     */
     @Override
     public FileConfiguration getConfig() {
 
         config = plugin.getConfig();
 
+        String header = "Prism Plugin Configuration\n\n"
+                + "Database Settings:\n"
+                + "  type: Specify the database system Prism should use.\n"
+                + "    Supported options: mysql, mariadb, postgresql, h2, sqlite (default).\n"
+                + "    SQLite is recommended for smaller servers or easy setup as it's file-based.\n"
+                + "    For larger servers, MySQL, MariaDB, or PostgreSQL are recommended for performance.\n\n"
+                + "  hostname, port, databaseName, username, password: Standard credentials for MySQL, MariaDB, PostgreSQL.\n"
+                + "    Default MySQL/MariaDB port: 3306\n"
+                + "    Default PostgreSQL port: 5432\n\n"
+                + "  filePath: For SQLite and H2, this is the name of the database file (e.g., prism.db) relative to the plugin's data folder.\n\n"
+                + "  h2.mysqlMode: If using H2, set to true for better compatibility if you plan to migrate from/to MySQL.\n"
+                + "  h2.autoServer: If using H2, set to true to allow multiple applications/plugins to access the same H2 database file (not commonly needed for Prism alone).\n\n"
+                + "  driverClassName: The Java class name for the JDBC driver. Prism attempts to auto-detect this based on 'type'.\n"
+                + "    Examples (usually not needed to change):\n"
+                + "      MySQL (old): com.mysql.jdbc.Driver\n"
+                + "      MySQL (new): com.mysql.cj.jdbc.Driver\n"
+                + "      MariaDB: org.mariadb.jdbc.Driver\n"
+                + "      PostgreSQL: org.postgresql.Driver\n"
+                + "      SQLite: org.sqlite.JDBC\n"
+                + "      H2: org.h2.Driver\n\n"
+                + "  jdbcUrlPrefix: The prefix for the JDBC connection URL. Prism also attempts to auto-detect this.\n"
+                + "    Examples (usually not needed to change):\n"
+                + "      MySQL: jdbc:mysql://\n"
+                + "      MariaDB: jdbc:mariadb://\n"
+                + "      PostgreSQL: jdbc:postgresql://\n"
+                + "      SQLite: jdbc:sqlite:\n"
+                + "      H2: jdbc:h2:\n";
+        config.options().header(header);
+        config.options().copyHeader(true);
+
+
         config.addDefault( "prism.debug", false );
         config.addDefault( "prism.allow-metrics", true );
-        // --- Database Settings ---
-        config.addDefault("prism.database.type", "sqlite"); // Changed default to sqlite for easy setup
-        // Options: mysql, mariadb, postgresql, h2, sqlite
 
-        // --- Settings for server-based databases (MySQL, MariaDB, PostgreSQL) ---
+        // Database
+        config.addDefault("prism.database.type", "sqlite");
         config.addDefault("prism.database.hostname", "127.0.0.1");
-        config.addDefault("prism.database.port", "3306"); // Default for MySQL/MariaDB, PostgreSQL is 5432
+        config.addDefault("prism.database.port", "3306");
         config.addDefault("prism.database.databaseName", "minecraft");
         config.addDefault("prism.database.username", "root");
         config.addDefault("prism.database.password", "");
         config.addDefault("prism.database.tablePrefix", "prism_");
-
-        // --- Settings for file-based databases (H2, SQLite) ---
-        config.addDefault("prism.database.filePath", "prism.db"); // Filename, relative to plugin data folder
-
-        // --- H2 Specific Settings ---
-        config.addDefault("prism.database.h2.mysqlMode", true); // For better compatibility if migrating or using MySQL-like queries
-        config.addDefault("prism.database.h2.autoServer", false); // Allows multiple connections to the same H2 file db
-
-        // --- JDBC Driver and URL (can be overridden per type if needed, but usually auto-detected) ---
-        config.addDefault("prism.database.driverClassName", "org.sqlite.JDBC"); // Example for SQLite
-        config.addDefault("prism.database.jdbcUrlPrefix", "jdbc:sqlite:"); // Example for SQLite
-
-        // --- Connection Pool settings (Tomcat JDBC Pool) ---
+        config.addDefault("prism.database.filePath", "prism.db");
+        config.addDefault("prism.database.h2.mysqlMode", true);
+        config.addDefault("prism.database.h2.autoServer", false);
+        config.addDefault("prism.database.driverClassName", "");
+        config.addDefault("prism.database.jdbcUrlPrefix", "");
         config.addDefault("prism.database.pool.max-connections", 20);
-        config.addDefault("prism.database.pool.initial-size", 5); // Reduced default initial size
+        config.addDefault("prism.database.pool.initial-size", 5);
         config.addDefault("prism.database.pool.max-idle-connections", 10);
         config.addDefault("prism.database.pool.max-wait-ms", 30000);
         config.addDefault("prism.database.max-failures-before-wait", 5);
+        config.addDefault("prism.database.min-actions-per-insert-batch", 1);
         config.addDefault("prism.database.actions-per-insert-batch", 1000);
         config.addDefault("prism.database.force-write-queue-on-shutdown", true);
 

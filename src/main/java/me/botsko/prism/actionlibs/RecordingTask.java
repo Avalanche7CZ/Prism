@@ -141,10 +141,18 @@ public class RecordingTask implements Runnable {
         ResultSet generatedKeys = null;
 
         try {
-            int perBatchConfig = plugin.getConfig().getInt("prism.database.actions-per-insert-batch", 1000);
-            if (perBatchConfig < 1) perBatchConfig = 1000;
+            int minBatchSize = plugin.getConfig().getInt("prism.database.min-actions-per-insert-batch", 50);
+            int maxBatchSize = plugin.getConfig().getInt("prism.database.actions-per-insert-batch", 1000);
+            if (maxBatchSize < 1) maxBatchSize = 1000;
+            if (minBatchSize < 1) minBatchSize = 1;
+            if (minBatchSize > maxBatchSize) minBatchSize = maxBatchSize;
 
             if (RecordingQueue.getQueue().isEmpty()) {
+                return;
+            }
+
+            if (!isForceDrainContext && RecordingQueue.getQueue().size() < minBatchSize) {
+                Prism.debug("Queue size (" + RecordingQueue.getQueue().size() + ") is less than min batch size (" + minBatchSize + "). Postponing batch insert.");
                 return;
             }
 
@@ -171,7 +179,7 @@ public class RecordingTask implements Runnable {
             psExtraData = conn.prepareStatement(sqlExtraData);
 
             int currentBatchSize = 0;
-            while (!RecordingQueue.getQueue().isEmpty() && currentBatchSize < perBatchConfig) {
+            while (!RecordingQueue.getQueue().isEmpty() && currentBatchSize < maxBatchSize) {
                 if (!plugin.isEnabled() && !isForceDrainContext) {
                     Prism.log("Plugin disabled during batch preparation, aborting.");
                     conn.rollback();
@@ -271,12 +279,12 @@ public class RecordingTask implements Runnable {
                     plugin.queueStats.addRunCount(handlersInCurrentBatch.size());
                 }
             } else {
-                if (conn != null && !conn.getAutoCommit() && !conn.isClosed()) conn.commit(); // Commit empty transaction
+                if (conn != null && !conn.getAutoCommit() && !conn.isClosed()) conn.commit();
                 Prism.debug("No actions processed in this batch run (queue might be empty or actions filtered).");
             }
         } catch (final SQLException e) {
             Prism.log("SQLException during batch insert: " + e.getMessage());
-            if (!isForceDrainContext) { // Only use central handler if not force draining, to avoid recursion
+            if (!isForceDrainContext) {
                 PrismDatabaseHandler.handleDatabaseException(e);
             }
             e.printStackTrace();
