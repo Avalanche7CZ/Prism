@@ -2,7 +2,7 @@ name: Prism
 main: me.botsko.prism.Prism
 version: ${version}
 softdepend: [WorldEdit,HeroChat]
-author: [Avalanche7CZ,viveleroi]
+author: [Avalanche7CZ,EverNife,viveleroi]
 website: https://github.com/Avalanche7CZ/Prism
 commands:
    prism:
@@ -23,6 +23,8 @@ permissions:
             prism.wand.profile: true
             prism.wand.rollback: true
             prism.wand.restore: true
+    prism.migrate:
+        default: op
     prism.setmy.wand:
         default: op
     prism.lookup:

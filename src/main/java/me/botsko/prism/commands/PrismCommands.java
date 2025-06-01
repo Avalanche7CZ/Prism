@@ -149,6 +149,12 @@ public class PrismCommands extends Executor {
         addSub( "flags", "prism.help" ).allowConsole().setHandler( new FlagsCommand() );
 
         /**
+         * /prism migrate
+         */
+        addSub( "migrate", "prism.migrate" ).allowConsole().setHandler( new MigrateCommand(prism) );
+
+
+        /**
          * /prism reload
          */
         addSub( "reload", "prism.reload" ).allowConsole().setHandler( new SubHandler() {

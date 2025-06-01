@@ -1,0 +1,32 @@
+# Prism Data Migration Target Configuration
+# -----------------------------------------
+# Configure these settings for the DATABASE YOU ARE MIGRATING TO.
+# Your current (source) database settings are still in config.yml.
+#
+# Supported types: mysql, mariadb, sqlite
+#
+# After a successful migration, you will need to update your main
+# config.yml (prism.database.*) to point to these new settings
+# and then RESTART your server.
+
+target:
+  type: "mysql" # Change to "mariadb" or "sqlite" as needed
+  hostname: "localhost"
+  port: "3306" # MySQL/MariaDB default. PostgreSQL is 5432. Not used for SQLite.
+  databaseName: "prism_migrated"
+  username: "root"
+  password: "your_password"
+  tablePrefix: "prism_" # Can be the same or different from your source
+
+  # Only for SQLite target:
+  filePath: "prism_migrated.db" # Name of the SQLite file to create/use
+
+  # Advanced: JDBC Driver and URL Prefix (usually auto-detected, override if needed)
+  # driverClassName:
+  #   mysql: "com.mysql.cj.jdbc.Driver"
+  #   mariadb: "org.mariadb.jdbc.Driver"
+  #   sqlite: "org.sqlite.JDBC"
+  # jdbcUrlPrefix:
+  #   mysql: "jdbc:mysql://"
+  #   mariadb: "jdbc:mariadb://"
+  #   sqlite: "jdbc:sqlite:"

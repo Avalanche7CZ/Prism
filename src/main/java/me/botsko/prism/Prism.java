@@ -97,7 +97,18 @@ public class Prism extends JavaPlugin {
         plugin_name = this.getDescription().getName();
         plugin_version = this.getDescription().getVersion();
         prism = this;
-        log("Initializing Prism " + plugin_version + ". By Viveleroi.");
+        log("==================================================");
+        log(" _____   _____   _____   _____  __  __ ");
+        log("|  __ \\ |  __ \\ |_   _| / ____||  \\/  |");
+        log("| |__) || |__) |  | |  | (___  | \\  / |");
+        log("|  ___/ |  _  /   | |   \\___ \\ | |\\/| |");
+        log("| |     | | \\ \\  _| |_  ____) || |  | |");
+        log("|_|     |_|  \\_\\|_____||_____/ |_|  |_|");
+        log(" ");
+        log("Initializing " + plugin_name + " v" + plugin_version);
+        log("Original by: Viveleroi");
+        log("Modified version by: Avalanche7CZ, EverNife");
+        log("==================================================");
         loadConfig();
 
         if (config.getBoolean("prism.allow-metrics")) {
@@ -115,7 +126,7 @@ public class Prism extends JavaPlugin {
             final String[] dbDisabled = new String[3];
             dbDisabled[0] = "Prism will disable itself because it couldn't connect to a database.";
             dbDisabled[1] = "If you're using MySQL/MariaDB, check your config. Be sure your database server is running.";
-            dbDisabled[2] = "For help - try http://discover-prism.com/wiki/view/troubleshooting/";
+            dbDisabled[2] = "For help - try https://github.com/Avalanche7CZ/Prism/wiki";
             logSection(dbDisabled);
             disablePlugin();
             return;

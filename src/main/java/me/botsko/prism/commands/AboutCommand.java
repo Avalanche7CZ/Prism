@@ -35,7 +35,7 @@ public class AboutCommand implements SubHandler {
         call.getSender().sendMessage(
                 Prism.messenger.playerSubduedHeaderMsg( "IRC: " + ChatColor.WHITE + "irc.esper.net #prism" ) );
         call.getSender().sendMessage(
-                Prism.messenger.playerSubduedHeaderMsg( "Wiki: " + ChatColor.WHITE + "http://discover-prism.com" ) );
+                Prism.messenger.playerSubduedHeaderMsg( "Wiki: " + ChatColor.WHITE + "https://github.com/Avalanche7CZ/Prism/wiki" ) );
     }
 
     @Override

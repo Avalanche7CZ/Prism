@@ -10,9 +10,6 @@ import java.util.List;
 
 public class HelpCommand implements SubHandler {
 
-    /**
-     * Handle the command
-     */
     @Override
     public void handle(CallInfo call) {
         help( call.getSender() );
@@ -23,11 +20,6 @@ public class HelpCommand implements SubHandler {
         return null;
     }
 
-    /**
-     * Displays help
-     * 
-     * @param sender
-     */
     protected void help(CommandSender sender) {
 
         sender.sendMessage( Prism.messenger.playerHeaderMsg( ChatColor.GOLD + "--- Basic Usage ---" ) );
@@ -69,6 +61,11 @@ public class HelpCommand implements SubHandler {
         sender.sendMessage( Prism.messenger.playerHelp( "recorder cancel", "Stops recorder. Use with caution." ) );
         sender.sendMessage( Prism.messenger.playerHelp( "recorder start", "Starts recorder if it's stopped" ) );
         sender.sendMessage( Prism.messenger.playerHelp( "reload", "Reload config/language files." ) );
+
+        sender.sendMessage( Prism.messenger.playerHeaderMsg( ChatColor.GOLD + "--- Data Migration ---" ) );
+        sender.sendMessage( Prism.messenger.playerHelp( "migrate start (target_type)", "Prepare for database migration (e.g., mysql, sqlite)." ) );
+        sender.sendMessage( Prism.messenger.playerHelp( "migrate confirm", "Confirm and start the migration process." ) );
+        sender.sendMessage( Prism.messenger.playerHelp( "migrate status", "Check the status of an ongoing migration." ) );
 
     }
 }
