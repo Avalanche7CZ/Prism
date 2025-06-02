@@ -3,6 +3,8 @@ package me.botsko.prism;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import me.botsko.elixr.MaterialAliases;
 import me.botsko.prism.actionlibs.*;
+import me.botsko.prism.configs.MonitoredItemsConfig;
+import me.botsko.prism.configs.PrismConfig;
 import me.botsko.prism.parameters.PrismParameterHandler;
 import me.botsko.prism.appliers.PreviewSession;
 import me.botsko.prism.bridge.PrismBlockEditSessionFactory;
@@ -40,7 +42,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -70,6 +71,7 @@ public class Prism extends JavaPlugin {
     public Prism prism;
     public static Messenger messenger;
     public static FileConfiguration config;
+    public static MonitoredItemsConfig monitoredItemsConfig;
     public static WorldEditPlugin plugin_worldEdit = null;
     public ActionsQuery actionsQuery;
     public OreMonitor oreMonitor;
@@ -109,14 +111,14 @@ public class Prism extends JavaPlugin {
         log("Original by: Viveleroi");
         log("Modified version by: Avalanche7CZ, EverNife");
         log("==================================================");
-        loadConfig();
+        loadAllConfigs();
 
         if (config.getBoolean("prism.allow-metrics")) {
             try {
                 final Metrics metrics = new Metrics(this);
                 metrics.start();
             } catch (final IOException e) {
-                log("MCStats submission failed.");
+                log("MCStats submission failed: " + e.getMessage());
             }
         }
 
@@ -215,9 +217,11 @@ public class Prism extends JavaPlugin {
     }
 
     @SuppressWarnings("unchecked")
-    public void loadConfig() {
+    public void loadAllConfigs(){
         final PrismConfig mc = new PrismConfig(this);
         config = mc.getConfig();
+
+        monitoredItemsConfig = new MonitoredItemsConfig(this);
 
         illegalBlocks = (ArrayList<Integer>) config.getList("prism.appliers.never-place-block");
         illegalEntities = (ArrayList<String>) config.getList("prism.appliers.never-spawn-entity");
@@ -235,9 +239,16 @@ public class Prism extends JavaPlugin {
     @Override
     public void reloadConfig() {
         super.reloadConfig();
-        loadConfig();
+        loadAllConfigs();
+
         PrismDatabaseHandler.loadDbConfigFields();
         PrismDatabaseHandler.configureDbPool();
+
+        log("Prism configurations reloaded.");
+    }
+
+    public static MonitoredItemsConfig getMonitoredItemsConfig() {
+        return monitoredItemsConfig;
     }
 
     public Language getLang() {

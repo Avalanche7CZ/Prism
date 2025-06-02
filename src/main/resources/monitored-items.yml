@@ -1,0 +1,11 @@
+# Prism - Monitored Items for Alerts
+alerts:
+  uses:
+    item-placement:
+      - "7"  # Bedrock
+      - "46" # TNT
+      - "10" # Flowing Lava
+      - "11" # Still Lava
+    item-break:
+    # - "diamond_block" # Example
+    # Add any default items to monitor for breaking here

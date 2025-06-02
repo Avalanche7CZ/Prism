@@ -48,7 +48,7 @@ public class PrismDatabaseHandler {
             }
             if (tempInstance != null) {
                 Prism.log(Level.INFO, "Attempting to load Prism config from PrismDatabaseHandler.loadDbConfigFields.");
-                tempInstance.loadConfig();
+                tempInstance.loadAllConfigs();
             }
 
             if (Prism.config == null) {
@@ -100,7 +100,7 @@ public class PrismDatabaseHandler {
             }
 
             if (tempInstanceForConfigLoad != null) {
-                tempInstanceForConfigLoad.loadConfig();
+                tempInstanceForConfigLoad.loadAllConfigs();
                 loadDbConfigFields();
             }
 
@@ -267,7 +267,7 @@ public class PrismDatabaseHandler {
                     }
                 }
                 if (localPluginInstance != null) {
-                    if (Prism.config == null) localPluginInstance.loadConfig();
+                    if (Prism.config == null) localPluginInstance.loadAllConfigs();
                     loadDbConfigFields();
                     configureDbPool();
                     if (pool == null || pool.getPoolProperties().getDriverClassName() == null) {
@@ -304,7 +304,7 @@ public class PrismDatabaseHandler {
                 PrismDatabaseHandler.pluginInstance = localPluginInstance;
             }
         }
-        if (Prism.config == null && localPluginInstance != null) localPluginInstance.loadConfig();
+        if (Prism.config == null && localPluginInstance != null) localPluginInstance.loadAllConfigs();
         loadDbConfigFields();
         configureDbPool();
         Prism.log("Database connection pool rebuilt.");
