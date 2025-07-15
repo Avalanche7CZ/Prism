@@ -103,9 +103,6 @@ public class PageCommand implements SubHandler {
             return;
         }
 
-        call.getSender().sendMessage(
-                Prism.messenger.playerHeaderMsg( "Showing " + results.getTotalResults() + " results. Page " + page
-                        + " of " + results.getTotal_pages() ) );
         final List<Handler> paginated = results.getPaginatedActionResults();
         if( paginated == null || paginated.size() == 0 ) {
             call.getSender()
@@ -114,6 +111,10 @@ public class PageCommand implements SubHandler {
                                     .playerError( "Pagination can't find anything. Do you have the right page number?" ) );
             return;
         }
+
+        call.getSender().sendMessage(
+                Prism.messenger.playerHeaderMsg( "Showing " + paginated.size() + " of " + results.getTotalResults()
+                        + " results. Page " + page + " of " + results.getTotal_pages() ) );
 
         // Show it!
         int result_count = results.getIndexOfFirstResult();
