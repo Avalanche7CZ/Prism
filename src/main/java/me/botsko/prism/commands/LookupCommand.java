@@ -90,12 +90,18 @@ public class LookupCommand implements SubHandler {
                     }
 
                     if( !results.getActionResults().isEmpty() ) {
-                        player.sendMessage( Prism.messenger.playerHeaderMsg( "Showing " + results.getTotalResults()
-                                + " results. Page 1 of " + results.getTotal_pages() ) );
+                        final List<Handler> paginated = results.getPaginatedActionResults();
+                        if( paginated != null ) {
+                            String headerMsg = "Showing " + paginated.size() + " of " + results.getTotalResults()
+                                + " results. Page 1 of " + results.getTotal_pages();
+                            if( results.getTotal_pages() > 1 ) {
+                                headerMsg += ". Use '/prism page <#>' to view other pages";
+                            }
+                            player.sendMessage( Prism.messenger.playerHeaderMsg( headerMsg ) );
+                        }
                         if( !defaultsReminder.isEmpty() && isSender ) {
                             player.sendMessage( Prism.messenger.playerSubduedHeaderMsg( defaultsReminder ) );
                         }
-                        final List<Handler> paginated = results.getPaginatedActionResults();
                         if( paginated != null ) {
                             int result_count = results.getIndexOfFirstResult();
                             for ( final Handler a : paginated ) {
