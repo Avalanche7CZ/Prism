@@ -26,6 +26,9 @@ dependencies {
     implementation 'org.apache.tomcat:tomcat-jdbc:9.0.80'
     implementation 'org.apache.tomcat:tomcat-juli:9.0.80'
     implementation('org.xerial:sqlite-jdbc:3.34.0')
+    // Execute regression tests against the actual 1.7.10 API used by Crucible.
+    testImplementation files('libs/spigot-1.7.10-SNAPSHOT-b1657.jar')
+    testImplementation 'junit:junit:4.13.2'
 }
 
 def targetJavaVersion = 8

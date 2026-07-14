@@ -1,11 +1,11 @@
 *.class
 lib/
-src/test/
 .settings/
 target/
-.idea\
+.idea/
 *.iml
 .classpath
 .project
 /build
 .gradle/
+/src/test

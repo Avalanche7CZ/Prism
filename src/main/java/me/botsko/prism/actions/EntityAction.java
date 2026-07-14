@@ -40,7 +40,7 @@ public class EntityAction extends GenericAction {
     /**
 	 * 
 	 */
-    protected EntityActionData actionData;
+    protected EntityActionData actionData = new EntityActionData();
 
     /**
      * 
@@ -177,6 +177,9 @@ public class EntityAction extends GenericAction {
 	 */
     @Override
     public void save() {
+        if( actionData == null ) {
+            actionData = new EntityActionData();
+        }
         data = gson.toJson( actionData );
     }
 
@@ -185,8 +188,18 @@ public class EntityAction extends GenericAction {
 	 */
     @Override
     public void setData(String data) {
+        this.data = data;
         if( data != null && data.startsWith( "{" ) ) {
-            actionData = gson.fromJson( data, EntityActionData.class );
+            try {
+                final EntityActionData parsedData = gson.fromJson( data, EntityActionData.class );
+                actionData = parsedData != null ? parsedData : new EntityActionData();
+            } catch ( final RuntimeException ignored ) {
+                // Keep legacy or partially-written records visible. Their
+                // missing metadata should not make an entire lookup fail.
+                actionData = new EntityActionData();
+            }
+        } else {
+            actionData = new EntityActionData();
         }
     }
 
@@ -195,6 +208,9 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public EntityType getEntityType() {
+        if( actionData == null || actionData.entity_name == null || actionData.entity_name.isEmpty() ) {
+            return null;
+        }
         try {
             final EntityType e = EntityType.valueOf( actionData.entity_name.toUpperCase() );
             if( e != null ) { return e; }
@@ -211,7 +227,7 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public boolean isAdult() {
-        return this.actionData.isAdult;
+        return this.actionData != null && this.actionData.isAdult;
     }
 
     /**
@@ -219,7 +235,7 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public boolean isSitting() {
-        return this.actionData.sitting;
+        return this.actionData != null && this.actionData.sitting;
     }
 
     /**
@@ -227,7 +243,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public DyeColor getColor() {
-        if( actionData.color != null ) { return DyeColor.valueOf( actionData.color.toUpperCase() ); }
+        if( actionData != null && actionData.color != null ) {
+            try {
+                return DyeColor.valueOf( actionData.color.toUpperCase() );
+            } catch ( final IllegalArgumentException ignored ) {}
+        }
         return null;
     }
 
@@ -236,7 +256,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public Profession getProfession() {
-        if( actionData.profession != null ) { return Profession.valueOf( actionData.profession.toUpperCase() ); }
+        if( actionData != null && actionData.profession != null ) {
+            try {
+                return Profession.valueOf( actionData.profession.toUpperCase() );
+            } catch ( final IllegalArgumentException ignored ) {}
+        }
         return null;
     }
 
@@ -245,7 +269,7 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public String getTamingOwner() {
-        return this.actionData.taming_owner;
+        return this.actionData != null ? this.actionData.taming_owner : null;
     }
 
     /**
@@ -253,7 +277,7 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public String getCustomName() {
-        return this.actionData.custom_name;
+        return this.actionData != null ? this.actionData.custom_name : null;
     }
 
     /**
@@ -261,7 +285,12 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public Ocelot.Type getCatType() {
-        return Ocelot.Type.valueOf( actionData.var.toUpperCase() );
+        if( actionData != null && actionData.var != null && !actionData.var.isEmpty() ) {
+            try {
+                return Ocelot.Type.valueOf( actionData.var.toUpperCase() );
+            } catch ( final IllegalArgumentException ignored ) {}
+        }
+        return null;
     }
 
     /**
@@ -270,6 +299,9 @@ public class EntityAction extends GenericAction {
      */
     @Override
     public String getNiceName() {
+        if( actionData == null ) {
+            return "entity";
+        }
         String name = "";
         if( actionData.color != null && !actionData.color.isEmpty() ) {
             name += actionData.color + " ";
@@ -283,10 +315,13 @@ public class EntityAction extends GenericAction {
         if( actionData.taming_owner != null ) {
             name += actionData.taming_owner + "'s ";
         }
-        if( (actionData.entity_name.equals("ocelot") || actionData.entity_name.equals("horse")) && actionData.var != null ) {
+        if( ("ocelot".equals(actionData.entity_name) || "horse".equals(actionData.entity_name))
+                && actionData.var != null && !actionData.var.isEmpty() ) {
             name += actionData.var.toLowerCase().replace("_", " ");
-        } else {
+        } else if( actionData.entity_name != null && !actionData.entity_name.isEmpty() ) {
             name += actionData.entity_name;
+        } else {
+            name += "entity";
         }
         if( this.actionData.newColor != null ) {
             name += " " + this.actionData.newColor;
@@ -302,7 +337,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public Variant getVariant() {
-        if( !this.actionData.var.isEmpty() ) { return Variant.valueOf( this.actionData.var ); }
+        if( this.actionData != null && this.actionData.var != null && !this.actionData.var.isEmpty() ) {
+            try {
+                return Variant.valueOf( this.actionData.var );
+            } catch ( final IllegalArgumentException ignored ) {}
+        }
         return null;
     }
 
@@ -311,8 +350,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public Horse.Color getHorseColor() {
-        if( this.actionData.hColor != null && !this.actionData.hColor.isEmpty() ) { return Horse.Color
-                .valueOf( this.actionData.hColor ); }
+        if( this.actionData != null && this.actionData.hColor != null && !this.actionData.hColor.isEmpty() ) {
+            try {
+                return Horse.Color.valueOf( this.actionData.hColor );
+            } catch ( final IllegalArgumentException ignored ) {}
+        }
         return null;
     }
 
@@ -321,7 +363,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public Horse.Style getStyle() {
-        if( !this.actionData.style.isEmpty() ) { return Horse.Style.valueOf( this.actionData.style ); }
+        if( this.actionData != null && this.actionData.style != null && !this.actionData.style.isEmpty() ) {
+            try {
+                return Horse.Style.valueOf( this.actionData.style );
+            } catch ( final IllegalArgumentException ignored ) {}
+        }
         return null;
     }
 
@@ -330,7 +376,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public ItemStack getSaddle() {
-        if( this.actionData.saddle != null ) { return new ItemStack( Integer.parseInt( this.actionData.saddle ), 1 ); }
+        if( this.actionData != null && this.actionData.saddle != null ) {
+            try {
+                return new ItemStack( Integer.parseInt( this.actionData.saddle ), 1 );
+            } catch ( final NumberFormatException ignored ) {}
+        }
         return null;
     }
 
@@ -339,7 +389,11 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public ItemStack getArmor() {
-        if( this.actionData.armor != null ) { return new ItemStack( Integer.parseInt( this.actionData.armor ), 1 ); }
+        if( this.actionData != null && this.actionData.armor != null ) {
+            try {
+                return new ItemStack( Integer.parseInt( this.actionData.armor ), 1 );
+            } catch ( final NumberFormatException ignored ) {}
+        }
         return null;
     }
 
@@ -348,7 +402,7 @@ public class EntityAction extends GenericAction {
      * @return
      */
     public double getMaxHealth() {
-        return this.actionData.maxHealth;
+        return this.actionData != null ? this.actionData.maxHealth : 0;
     }
 
     /**

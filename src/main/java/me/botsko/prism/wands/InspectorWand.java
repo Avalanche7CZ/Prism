@@ -1,6 +1,7 @@
 package me.botsko.prism.wands;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.ActionMessage;
@@ -53,6 +54,48 @@ public class InspectorWand extends QueryWandBase implements Wand {
 
         final Block block = loc.getBlock();
 
+        // Build all Bukkit-dependent context on the primary server thread.
+        QueryParameters queryParameters;
+        try {
+            queryParameters = parameters.clone();
+        } catch ( final CloneNotSupportedException ex ) {
+            queryParameters = new QueryParameters();
+            player.sendMessage( Prism.messenger
+                    .playerError( "Error retrieving parameters. Checking with default parameters." ) );
+        }
+        queryParameters.setWorld( player.getWorld().getName() );
+        queryParameters.setSpecificBlockLocation( loc );
+
+        // Do we need a second location? (For beds, doors, etc)
+        final Block sibling = me.botsko.elixr.BlockUtils.getSiblingForDoubleLengthBlock( block );
+        if( sibling != null ) {
+            queryParameters.addSpecificBlockLocation( sibling.getLocation() );
+        }
+
+        // Ignoring any actions via config?
+        if( queryParameters.getActionTypes().size() == 0 ) {
+            @SuppressWarnings("unchecked")
+            final ArrayList<String> ignoreActions = (ArrayList<String>) plugin.getConfig().getList(
+                    "prism.wands.inspect.ignore-actions" );
+            if( ignoreActions != null && !ignoreActions.isEmpty() ) {
+                for ( final String ignore : ignoreActions ) {
+                    queryParameters.addActionType( ignore, MatchRule.EXCLUDE );
+                }
+            }
+        }
+        for ( final String _default : queryParameters.getDefaultsUsed() ) {
+            if( _default.startsWith( "t:" ) ) {
+                queryParameters.setIgnoreTime( true );
+                break;
+            }
+        }
+
+        final QueryParameters params = queryParameters;
+        final String blockname = Prism.getItems().getAlias( block.getTypeId(), block.getData() );
+        final String spaceName = ( block.getType().equals( Material.AIR ) ? "space" : block.getType()
+                .toString().replaceAll( "_", " " ).toLowerCase()
+                + ( block.getType().toString().endsWith( "BLOCK" ) ? "" : " block" ) );
+
         /**
          * Run the lookup itself in an async task so the lookup query isn't done
          * on the main thread
@@ -60,74 +103,47 @@ public class InspectorWand extends QueryWandBase implements Wand {
         plugin.getServer().getScheduler().runTaskAsynchronously( plugin, new Runnable() {
             @Override
             public void run() {
-
-                // Build params
-                QueryParameters params;
-
-                try {
-                    params = parameters.clone();
-                } catch ( final CloneNotSupportedException ex ) {
-                    params = new QueryParameters();
-                    player.sendMessage( Prism.messenger
-                            .playerError( "Error retrieving parameters. Checking with default parameters." ) );
-                }
-                params.setWorld( player.getWorld().getName() );
-                params.setSpecificBlockLocation( loc );
-
-                // Do we need a second location? (For beds, doors, etc)
-                final Block sibling = me.botsko.elixr.BlockUtils.getSiblingForDoubleLengthBlock( block );
-                if( sibling != null ) {
-                    params.addSpecificBlockLocation( sibling.getLocation() );
-                }
-
-                // Ignoring any actions via config?
-                if( params.getActionTypes().size() == 0 ) {
-                    @SuppressWarnings("unchecked")
-                    final ArrayList<String> ignoreActions = (ArrayList<String>) plugin.getConfig().getList(
-                            "prism.wands.inspect.ignore-actions" );
-                    if( ignoreActions != null && !ignoreActions.isEmpty() ) {
-                        for ( final String ignore : ignoreActions ) {
-                            params.addActionType( ignore, MatchRule.EXCLUDE );
-                        }
-                    }
-                }
-                boolean timeDefault = false;
-                for ( final String _default : params.getDefaultsUsed() ) {
-                    if( _default.startsWith( "t:" ) ) {
-                        timeDefault = true;
-                    }
-                }
-                if( timeDefault ) {
-                    params.setIgnoreTime( true );
-                }
-
                 // Query
                 final ActionsQuery aq = new ActionsQuery( plugin );
                 final QueryResult results = aq.lookup( params, player );
-                if( !results.getActionResults().isEmpty() ) {
-                    final String blockname = Prism.getItems().getAlias( block.getTypeId(), block.getData() );
-                    player.sendMessage( Prism.messenger.playerHeaderMsg( ChatColor.GOLD + "--- Inspecting " + blockname
-                            + " at " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() + " ---" ) );
-                    if( results.getActionResults().size() > 5 ) {
-                        player.sendMessage( Prism.messenger.playerHeaderMsg( "Showing " + results.getTotalResults()
-                                + " results. Page 1 of " + results.getTotal_pages() ) );
+                plugin.getServer().getScheduler().runTask( plugin, new Runnable() {
+                    @Override
+                    public void run() {
+                        showResults( player, loc, blockname, spaceName, params, results );
                     }
-                    for ( final me.botsko.prism.actions.Handler a : results.getPaginatedActionResults() ) {
-                        final ActionMessage am = new ActionMessage( a );
-                        if( parameters.hasFlag( Flag.EXTENDED )
-                                || plugin.getConfig().getBoolean( "prism.messenger.always-show-extended" ) ) {
-                            am.showExtended();
-                        }
-                        player.sendMessage( Prism.messenger.playerMsg( am.getMessage() ) );
-                    }
-                } else {
-                    final String space_name = ( block.getType().equals( Material.AIR ) ? "space" : block.getType()
-                            .toString().replaceAll( "_", " " ).toLowerCase()
-                            + ( block.getType().toString().endsWith( "BLOCK" ) ? "" : " block" ) );
-                    player.sendMessage( Prism.messenger.playerError( "No history for this " + space_name + " found." ) );
-                }
+                } );
             }
         } );
+    }
+
+    protected void showResults(Player player, Location loc, String blockname, String spaceName,
+            QueryParameters params, QueryResult results) {
+        if( !results.getActionResults().isEmpty() ) {
+            player.sendMessage( Prism.messenger.playerHeaderMsg( ChatColor.GOLD + "--- Inspecting " + blockname
+                    + " at " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() + " ---" ) );
+            final List<me.botsko.prism.actions.Handler> paginated = results.getPaginatedActionResults();
+            if( results.getTotal_pages() > 1 && paginated != null ) {
+                player.sendMessage( Prism.messenger.playerHeaderMsg( buildPaginationMessage( results, paginated.size() ) ) );
+            }
+            if( paginated != null ) {
+                for ( final me.botsko.prism.actions.Handler a : paginated ) {
+                    final ActionMessage am = new ActionMessage( a );
+                    if( params.hasFlag( Flag.EXTENDED )
+                            || plugin.getConfig().getBoolean( "prism.messenger.always-show-extended" ) ) {
+                        am.showExtended();
+                    }
+                    player.sendMessage( Prism.messenger.playerMsg( am.getMessage() ) );
+                }
+            }
+        } else {
+            player.sendMessage( Prism.messenger.playerError( "No history for this " + spaceName + " found." ) );
+        }
+    }
+
+    static String buildPaginationMessage(QueryResult results, int displayedResults) {
+        return "Showing " + displayedResults + " of " + results.getTotalResults() + " results. Page "
+                + results.getPage() + " of " + results.getTotal_pages()
+                + ". Use '/prism page <#>' to view other pages";
     }
 
     /**

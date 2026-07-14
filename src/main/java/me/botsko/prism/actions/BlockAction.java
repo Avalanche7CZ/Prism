@@ -55,11 +55,30 @@ public class BlockAction extends GenericAction {
             }
 
             // spawner
-            if( state.getTypeId() == 52 ) {
+            if( state.getTypeId() == 52 && state instanceof CreatureSpawner ) {
                 final SpawnerActionData spawnerActionData = new SpawnerActionData();
                 final CreatureSpawner s = (CreatureSpawner) state;
-                spawnerActionData.entity_type = s.getSpawnedType().name().toLowerCase();
-                spawnerActionData.delay = s.getDelay();
+                EntityType spawnedType = null;
+                try {
+                    spawnedType = s.getSpawnedType();
+                } catch ( final RuntimeException ignored ) {}
+                if( spawnedType != null ) {
+                    spawnerActionData.entity_type = spawnedType.name().toLowerCase();
+                } else {
+                    // Modded 1.7 servers may expose a custom creature id without
+                    // being able to map it to Bukkit's EntityType enum.
+                    try {
+                        spawnerActionData.entity_type = s.getCreatureTypeId();
+                    } catch ( final RuntimeException ignored ) {}
+                    if( spawnerActionData.entity_type == null || spawnerActionData.entity_type.isEmpty() ) {
+                        try {
+                            spawnerActionData.entity_type = s.getCreatureTypeName();
+                        } catch ( final RuntimeException ignored ) {}
+                    }
+                }
+                try {
+                    spawnerActionData.delay = s.getDelay();
+                } catch ( final RuntimeException ignored ) {}
                 actionData = spawnerActionData;
             }
 
@@ -67,9 +86,13 @@ public class BlockAction extends GenericAction {
             else if( ( state.getTypeId() == 144 || state.getTypeId() == 397 ) ) {
                 final SkullActionData skullActionData = new SkullActionData();
                 final Skull s = (Skull) state;
-                skullActionData.rotation = s.getRotation().name().toLowerCase();
+                if( s.getRotation() != null ) {
+                    skullActionData.rotation = s.getRotation().name().toLowerCase();
+                }
                 skullActionData.owner = s.getOwner();
-                skullActionData.skull_type = s.getSkullType().name().toLowerCase();
+                if( s.getSkullType() != null ) {
+                    skullActionData.skull_type = s.getSkullType().name().toLowerCase();
+                }
                 actionData = skullActionData;
             }
 
@@ -143,10 +166,14 @@ public class BlockAction extends GenericAction {
         String name = "";
         if( actionData instanceof SkullActionData ) {
             final SkullActionData ad = (SkullActionData) getActionData();
-            name += ad.skull_type + " ";
+            if( ad.skull_type != null && !ad.skull_type.isEmpty() ) {
+                name += ad.skull_type + " ";
+            }
         } else if( actionData instanceof SpawnerActionData ) {
             final SpawnerActionData ad = (SpawnerActionData) getActionData();
-            name += ad.entity_type + " ";
+            if( ad.entity_type != null && !ad.entity_type.isEmpty() ) {
+                name += ad.entity_type + " ";
+            }
         }
         name += materialAliases.getAlias( this.block_id, this.block_subid );
         if( actionData instanceof SignActionData ) {
@@ -182,7 +209,14 @@ public class BlockAction extends GenericAction {
          * @return
          */
         public EntityType getEntityType() {
-            return EntityType.valueOf( entity_type.toUpperCase() );
+            if( entity_type != null && !entity_type.isEmpty() ) {
+                try {
+                    return EntityType.valueOf( entity_type.toUpperCase() );
+                } catch ( final IllegalArgumentException ignored ) {
+                    // Custom/modded creature ids are not in Bukkit's enum.
+                }
+            }
+            return null;
         }
 
         /**
@@ -209,7 +243,11 @@ public class BlockAction extends GenericAction {
          * @return
          */
         public SkullType getSkullType() {
-            if( skull_type != null ) { return SkullType.valueOf( skull_type.toUpperCase() ); }
+            if( skull_type != null ) {
+                try {
+                    return SkullType.valueOf( skull_type.toUpperCase() );
+                } catch ( final IllegalArgumentException ignored ) {}
+            }
             return null;
         }
 
@@ -218,7 +256,11 @@ public class BlockAction extends GenericAction {
          * @return
          */
         public BlockFace getRotation() {
-            if( rotation != null ) { return BlockFace.valueOf( rotation.toUpperCase() ); }
+            if( rotation != null ) {
+                try {
+                    return BlockFace.valueOf( rotation.toUpperCase() );
+                } catch ( final IllegalArgumentException ignored ) {}
+            }
             return null;
         }
     }
@@ -365,9 +407,13 @@ public class BlockAction extends GenericAction {
 
                 // Set skull data
                 final Skull skull = (Skull) block.getState();
-                skull.setRotation( s.getRotation() );
-                skull.setSkullType( s.getSkullType() );
-                if( !s.owner.isEmpty() ) {
+                if( s.getRotation() != null ) {
+                    skull.setRotation( s.getRotation() );
+                }
+                if( s.getSkullType() != null ) {
+                    skull.setSkullType( s.getSkullType() );
+                }
+                if( s.owner != null && !s.owner.isEmpty() ) {
                     skull.setOwner( s.owner );
                 }
                 skull.update();
@@ -377,14 +423,23 @@ public class BlockAction extends GenericAction {
             /**
              * Spawner
              */
-            if( getBlockId() == 52 ) {
+            if( getBlockId() == 52 && getActionData() instanceof SpawnerActionData ) {
 
                 final SpawnerActionData s = (SpawnerActionData) getActionData();
 
                 // Set spawner data
                 final CreatureSpawner spawner = (CreatureSpawner) block.getState();
                 spawner.setDelay( s.getDelay() );
-                spawner.setSpawnedType( s.getEntityType() );
+                try {
+                    if( s.getEntityType() != null ) {
+                        spawner.setSpawnedType( s.getEntityType() );
+                    } else if( s.entity_type != null && !s.entity_type.isEmpty() ) {
+                        spawner.setCreatureTypeId( s.entity_type );
+                    }
+                } catch ( final RuntimeException ignored ) {
+                    // The block is still restored even if a modded creature id
+                    // cannot be applied through Bukkit's spawner API.
+                }
                 spawner.update();
 
             }

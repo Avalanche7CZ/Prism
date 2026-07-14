@@ -55,6 +55,7 @@ public class ActionMessage {
      */
     public String getRawMessage() {
         final StringBuilder msg = new StringBuilder();
+        final String niceName = getNiceNameSafely();
         msg.append( ( a.getType().doesCreateBlock() || a.getType().getName().equals( "item-insert" ) || a.getType()
                 .getName().equals( "sign-change" ) ) ? "+" : "-" );
         msg.append( " #" + a.getId() );
@@ -62,8 +63,8 @@ public class ActionMessage {
         msg.append( " " + a.getType().getName() );
         msg.append( " " + a.getBlockId() + ":" + a.getBlockSubId() );
         if( a.getType().getHandler() != null ) {
-            if( !a.getNiceName().isEmpty() )
-                msg.append( " (" + a.getNiceName() + ")" );
+            if( !niceName.isEmpty() )
+                msg.append( " (" + niceName + ")" );
         } else {
             // We should really improve this, but this saves me from having to
             // make
@@ -89,6 +90,7 @@ public class ActionMessage {
     public String[] getMessage() {
 
         String[] msg = new String[1];
+        final String niceName = getNiceNameSafely();
         if( showExtended ) {
             msg = new String[2];
         }
@@ -111,8 +113,8 @@ public class ActionMessage {
         // Description of event
         line1 += " " + ChatColor.WHITE + a.getType().getNiceDescription();
         if( a.getType().getHandler() != null ) {
-            if( !a.getNiceName().isEmpty() )
-                line1 += " " + highlight + a.getNiceName();
+            if( !niceName.isEmpty() )
+                line1 += " " + highlight + niceName;
         } else {
             // We should really improve this, but this saves me from having to
             // make
@@ -161,6 +163,20 @@ public class ActionMessage {
 
         return msg;
 
+    }
+
+    /**
+     * Old rows may have no metadata because earlier writers failed to create a
+     * matching prism_data_extra row. Keep the base action visible even when a
+     * handler cannot render those missing details.
+     */
+    private String getNiceNameSafely() {
+        try {
+            final String niceName = a.getNiceName();
+            return niceName != null ? niceName : "";
+        } catch ( final RuntimeException ignored ) {
+            return "";
+        }
     }
 
     /**

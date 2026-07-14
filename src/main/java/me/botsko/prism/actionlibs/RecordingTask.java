@@ -125,6 +125,51 @@ public class RecordingTask implements Runnable {
         return generatedDataId;
     }
 
+    /**
+     * Inserts one already-validated action and immediately associates its
+     * optional extra data with that row's generated key. The caller owns the
+     * transaction and prepared statements.
+     */
+    static long insertPreparedAction(PreparedStatement psData, PreparedStatement psExtraData, Handler action,
+            int actionId, int playerId, int worldId, long epoch) throws SQLException {
+        psData.setLong(1, epoch);
+        psData.setInt(2, actionId);
+        psData.setInt(3, playerId);
+        psData.setInt(4, worldId);
+        psData.setInt(5, action.getBlockId());
+        psData.setInt(6, action.getBlockSubId());
+        psData.setInt(7, action.getOldBlockId());
+        psData.setInt(8, action.getOldBlockSubId());
+        psData.setInt(9, (int) action.getX());
+        psData.setInt(10, (int) action.getY());
+        psData.setInt(11, (int) action.getZ());
+
+        if (psData.executeUpdate() != 1) {
+            throw new SQLException("Failed to insert prism_data action for '" + action.getPlayerName() + "'.");
+        }
+
+        final long generatedDataId;
+        try (ResultSet keys = psData.getGeneratedKeys()) {
+            if (!keys.next()) {
+                throw new SQLException("Failed to retrieve generated prism_data key for '"
+                        + action.getPlayerName() + "'.");
+            }
+            generatedDataId = keys.getLong(1);
+        }
+        if (generatedDataId <= 0) {
+            throw new SQLException("Invalid generated prism_data key for '" + action.getPlayerName() + "'.");
+        }
+
+        if (action.getData() != null && !action.getData().isEmpty()) {
+            psExtraData.setLong(1, generatedDataId);
+            psExtraData.setString(2, action.getData());
+            if (psExtraData.executeUpdate() != 1) {
+                throw new SQLException("Failed to insert prism_data_extra for data id " + generatedDataId + ".");
+            }
+        }
+        return generatedDataId;
+    }
+
     public void insertActionsIntoDatabase() {
         boolean isForceDrainContext = !plugin.isEnabled() && plugin.getServer().isPrimaryThread();
 
@@ -138,7 +183,7 @@ public class RecordingTask implements Runnable {
         Connection conn = null;
         PreparedStatement psData = null;
         PreparedStatement psExtraData = null;
-        ResultSet generatedKeys = null;
+        boolean transactionCommitted = false;
 
         try {
             int minBatchSize = plugin.getConfig().getInt("prism.database.min-actions-per-insert-batch", 50);
@@ -205,81 +250,28 @@ public class RecordingTask implements Runnable {
                     continue;
                 }
                 RecordingQueue.getQueue().poll();
-                psData.setLong(1, System.currentTimeMillis() / 1000L);
-                psData.setInt(2, action_id);
-                psData.setInt(3, player_id);
-                psData.setInt(4, world_id);
-                psData.setInt(5, a.getBlockId());
-                psData.setInt(6, a.getBlockSubId());
-                psData.setInt(7, a.getOldBlockId());
-                psData.setInt(8, a.getOldBlockSubId());
-                psData.setInt(9, (int) a.getX());
-                psData.setInt(10, (int) a.getY());
-                psData.setInt(11, (int) a.getZ());
-                psData.addBatch();
                 handlersInCurrentBatch.add(a);
+                insertPreparedAction(psData, psExtraData, a, action_id, player_id, world_id,
+                        System.currentTimeMillis() / 1000L);
                 currentBatchSize++;
             }
 
             if (!handlersInCurrentBatch.isEmpty()) {
                 if (!plugin.isEnabled() && !isForceDrainContext) {
-                    Prism.log("Plugin disabled before prism_data batch execution, aborting.");
+                    Prism.log("Plugin disabled before prism_data commit, aborting.");
                     conn.rollback();
                     return;
                 }
-                Prism.debug("Executing prism_data batch for " + handlersInCurrentBatch.size() + " actions.");
-                psData.executeBatch();
 
-                generatedKeys = psData.getGeneratedKeys();
-                int keyIndex = 0;
-                boolean hasAnyExtraDataInThisBatch = false;
-                while (generatedKeys.next()) {
-                    if (!plugin.isEnabled() && !isForceDrainContext) {
-                        Prism.log("Plugin disabled during generated keys processing, aborting.");
-                        conn.rollback();
-                        return;
-                    }
-                    int currentGeneratedDataId = generatedKeys.getInt(1);
-                    if (keyIndex < handlersInCurrentBatch.size()) {
-                        Handler currentHandler = handlersInCurrentBatch.get(keyIndex);
-                        if (currentHandler.getData() != null && !currentHandler.getData().isEmpty()) {
-                            psExtraData.setInt(1, currentGeneratedDataId);
-                            psExtraData.setString(2, currentHandler.getData());
-                            psExtraData.addBatch();
-                            hasAnyExtraDataInThisBatch = true;
-                        }
-                    } else {
-                        Prism.log("Warning: More generated keys than handlers in batch. Key Index: " + keyIndex + ", Handler Count: " + handlersInCurrentBatch.size());
-                    }
-                    keyIndex++;
-                }
-                if (keyIndex != handlersInCurrentBatch.size()) {
-                    Prism.log("Warning: Mismatch in generated keys count (" + keyIndex +
-                            ") and batched prism_data actions (" + handlersInCurrentBatch.size() + "). Data integrity for extra_data might be affected.");
-                }
-
-                if (hasAnyExtraDataInThisBatch) {
-                    if (!plugin.isEnabled() && !isForceDrainContext) {
-                        Prism.log("Plugin disabled before prism_data_extra batch execution, aborting.");
-                        conn.rollback();
-                        return;
-                    }
-                    Prism.debug("Executing prism_data_extra batch.");
-                    psExtraData.executeBatch();
-                }
-
-                if (!plugin.isEnabled() && !isForceDrainContext) {
-                    Prism.log("Plugin disabled before commit, aborting and rolling back.");
-                    conn.rollback();
-                    return;
-                }
                 conn.commit();
-                Prism.debug("Batch insert committed. Actions recorded: " + handlersInCurrentBatch.size());
+                transactionCommitted = true;
+                Prism.debug("Transactional insert committed. Actions recorded: " + handlersInCurrentBatch.size());
                 if (!isForceDrainContext) {
                     plugin.queueStats.addRunCount(handlersInCurrentBatch.size());
                 }
             } else {
                 if (conn != null && !conn.getAutoCommit() && !conn.isClosed()) conn.commit();
+                transactionCommitted = true;
                 Prism.debug("No actions processed in this batch run (queue might be empty or actions filtered).");
             }
         } catch (final SQLException e) {
@@ -300,7 +292,11 @@ public class RecordingTask implements Runnable {
                 }
             }
         } finally {
-            if (generatedKeys != null) try { generatedKeys.close(); } catch (final SQLException ignored) {}
+            if (!transactionCommitted && !handlersInCurrentBatch.isEmpty()) {
+                RecordingQueue.getQueue().addAll(handlersInCurrentBatch);
+                Prism.log("Returned " + handlersInCurrentBatch.size()
+                        + " uncommitted actions to the recording queue.");
+            }
             if (psData != null) try { psData.close(); } catch (final SQLException ignored) {}
             if (psExtraData != null) try { psExtraData.close(); } catch (final SQLException ignored) {}
             if (conn != null) {
